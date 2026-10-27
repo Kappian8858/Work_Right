@@ -56,12 +56,61 @@
       border: 1px solid var(--border-color);
     }
     .qr-image {
-      width: 180px;
-      height: 180px;
+      width: 170px;
+      height: 170px;
       background: white;
       padding: 8px;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
+    }
+    .stat-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .stat-mini-card {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-mini-val {
+      font-size: 20px;
+      font-weight: 800;
+    }
+    .stat-mini-lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .history-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .history-card:last-child {
+      margin-bottom: 0;
+    }
+    .cert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
     }
   </style>
 </head>
@@ -92,7 +141,7 @@
   <main class="container" role="main">
     <div style="margin-bottom: 16px;">
       <h1 class="page-title" data-i18n="passport_title">Verifiable Skill Passport</h1>
-      <p class="page-subtitle" data-i18n="passport_subtitle">Portable proof of your work history, verified skills, and fair pay record</p>
+      <p class="page-subtitle" data-i18n="passport_subtitle">Portable proof of your work experience, verified skills, and official PDF certificate</p>
     </div>
 
     <!-- Official Passport Profile Card -->
@@ -128,59 +177,158 @@
           </div>
         </div>
 
+        <!-- Verification Certificate Status Banner -->
+        <div id="verifiedStatusBox" style="margin-top: 14px; padding: 12px; background: #f0fdf4; border: 2px solid #86efac; border-radius: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <strong style="color: #166534; font-size: 13px;">🛡️ Official Verification Certificate:</strong>
+            <span id="certIdPill" class="cert-badge">VPC-2026-ACTIVE</span>
+          </div>
+          <div id="certStatusMsg" style="font-size: 12px; color: #15803d;">
+            Verified and approved by employer administration. Ready for PDF download.
+          </div>
+          <!-- Download PDF Button inside passport card -->
+          <a
+            id="downloadPassportPdfBtn"
+            href="#"
+            target="_blank"
+            class="btn-touch btn-success"
+            style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; margin-top: 10px; min-height: 48px; font-weight: 700;"
+          >
+            <span>📥 Download Verified Passport (PDF)</span>
+          </a>
+        </div>
+
         <!-- Pay Compliance Status -->
         <div id="compliancePill" class="compliance-pill compliance-fair">
           <span id="complianceIcon" aria-hidden="true">🛡️</span>
           <span id="complianceText">Pay Compliance: 0 clean weeks / 0 total</span>
         </div>
-
-        <!-- Skills Checklist Section -->
-        <div style="margin-top: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <label class="form-label" style="margin-bottom: 0;" data-i18n="passport_skills_label">Verified Skills</label>
-            <span style="font-size: 12px; color: var(--text-muted);">(Check skills you perform)</span>
-          </div>
-          <form id="skillsForm" onsubmit="saveSkills(event)">
-            <div id="skillsChecklist" class="skill-checkbox-grid">
-              <!-- Dynamically populated skills -->
-            </div>
-            <button type="submit" class="btn-touch btn-secondary" style="margin-top: 8px; min-height: 50px;" data-i18n="passport_update_skills">
-              Update Skills
-            </button>
-          </form>
-        </div>
-
-        <!-- Employment & Wage Timeline -->
-        <div style="margin-top: 24px;">
-          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 10px;" data-i18n="passport_timeline_label">
-            Employment & Wage Timeline
-          </h3>
-          <div id="timelineContainer">
-            <p style="color: var(--text-muted); font-size: 13px;">Loading timeline...</p>
-          </div>
-        </div>
-
-        <!-- QR Code Verification Section -->
-        <div class="qr-container">
-          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;" data-i18n="passport_qr_label">
-            Shareable Verification QR Code
-          </h4>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; text-align: center;">
-            Employers can scan to verify work weeks and skills instantly. Pay amounts remain private.
-          </p>
-          <img id="qrImage" class="qr-image" alt="Passport Verification QR Code" src="" style="display: none;">
-          <div id="qrLoading" style="font-size: 13px; color: var(--text-muted); padding: 30px;">Generating QR Code...</div>
-        </div>
       </div>
     </article>
 
-    <!-- Share Button (Primary Action) -->
-    <div style="margin-bottom: 24px;">
-      <button type="button" id="sharePassportBtn" class="btn-touch btn-primary" onclick="sharePassport()" aria-label="Share My Passport">
-        <span aria-hidden="true">🔗</span>
-        <span data-i18n="passport_share_button">Share My Passport</span>
-      </button>
-    </div>
+    <!-- WORK EXPERIENCE BOX SECTION -->
+    <section class="card" aria-label="Work Experience Section">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <h2 style="font-size: 17px; font-weight: 700;">💼 Work Experience</h2>
+        <span style="font-size: 12px; color: var(--text-muted);">Trade History</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+        Add your past work history, project background, and years of trade experience. This is verified by employers and printed on your official PDF passport.
+      </p>
+
+      <form id="experienceForm" onsubmit="saveExperience(event)">
+        <div class="form-group">
+          <label for="experienceInput" class="form-label">Your Documented Trade Experience</label>
+          <textarea
+            id="experienceInput"
+            class="form-textarea"
+            rows="3"
+            placeholder="e.g. 4 years experience in commercial masonry, high-rise plastering, scaffolding erection, and safety protocol compliance..."
+            required
+            aria-required="true"
+          ></textarea>
+        </div>
+        <button type="submit" id="saveExperienceBtn" class="btn-touch btn-secondary" style="min-height: 48px;">
+          <span>💾 Save Experience</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- PASSPORT VERIFICATION REQUEST & HISTORY SECTION -->
+    <section class="card" aria-label="Passport Verification Requests">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <h2 style="font-size: 17px; font-weight: 700;">📋 Verification Requests &amp; History</h2>
+        <span style="font-size: 12px; color: var(--text-muted);">Audit Trail</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        Send a verification request to your employer administrator. Once granted, your official passport certificate is unlocked with instant PDF download.
+      </p>
+
+      <!-- History Statistics Summary: Requested vs Granted -->
+      <div class="stat-mini-grid">
+        <div class="stat-mini-card">
+          <div class="stat-mini-val" id="statReqTotal" style="color: #1e3a8a;">0</div>
+          <div class="stat-mini-lbl">Requested</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-val" id="statReqGranted" style="color: #166534;">0</div>
+          <div class="stat-mini-lbl">Granted</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-val" id="statReqPending" style="color: #b45309;">0</div>
+          <div class="stat-mini-lbl">Pending</div>
+        </div>
+      </div>
+
+      <!-- Action Button to Send Verification Request -->
+      <div style="margin-bottom: 16px;">
+        <button
+          type="button"
+          id="sendRequestBtn"
+          class="btn-touch btn-primary"
+          onclick="requestPassportVerification()"
+          style="min-height: 52px; width: 100%;"
+        >
+          <span aria-hidden="true">📤</span>
+          <span>Send Request for Passport Verification</span>
+        </button>
+      </div>
+
+      <!-- Verification Request History Log -->
+      <div>
+        <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #1e293b;">
+          Request &amp; Verification History
+        </h3>
+        <div id="requestHistoryContainer">
+          <p style="color: var(--text-muted); font-size: 13px;">Loading verification request history...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SKILLS CHECKLIST SECTION -->
+    <section class="card" aria-label="Verified Skills">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label class="form-label" style="margin-bottom: 0;" data-i18n="passport_skills_label">Verified Skills</label>
+        <span style="font-size: 12px; color: var(--text-muted);">(Check skills you perform)</span>
+      </div>
+      <form id="skillsForm" onsubmit="saveSkills(event)">
+        <div id="skillsChecklist" class="skill-checkbox-grid">
+          <!-- Dynamically populated skills -->
+        </div>
+        <button type="submit" class="btn-touch btn-secondary" style="margin-top: 10px; min-height: 48px;" data-i18n="passport_update_skills">
+          Update Skills
+        </button>
+      </form>
+    </section>
+
+    <!-- EMPLOYMENT & WAGE TIMELINE -->
+    <section class="card" aria-label="Employment Timeline">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 10px;" data-i18n="passport_timeline_label">
+        Employment &amp; Wage Timeline
+      </h3>
+      <div id="timelineContainer">
+        <p style="color: var(--text-muted); font-size: 13px;">Loading timeline...</p>
+      </div>
+    </section>
+
+    <!-- QR CODE & SHARE SECTION -->
+    <section class="card qr-container" aria-label="QR Code Verification">
+      <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;" data-i18n="passport_qr_label">
+        Shareable Verification QR Code
+      </h4>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; text-align: center;">
+        Employers can scan to verify work weeks, experience, and skills instantly. Pay amounts remain private.
+      </p>
+      <img id="qrImage" class="qr-image" alt="Passport Verification QR Code" src="" style="display: none;">
+      <div id="qrLoading" style="font-size: 13px; color: var(--text-muted); padding: 30px;">Generating QR Code...</div>
+
+      <div style="margin-top: 16px; width: 100%;">
+        <button type="button" id="sharePassportBtn" class="btn-touch btn-primary" onclick="sharePassport()" aria-label="Share My Passport">
+          <span aria-hidden="true">🔗</span>
+          <span data-i18n="passport_share_button">Share My Passport Link</span>
+        </button>
+      </div>
+    </section>
 
     <!-- Toast -->
     <div id="toast" class="toast" role="status"></div>
@@ -237,6 +385,7 @@
 
         renderPassport(currentPassport);
         loadQRCode(workerId);
+        loadRequestHistory(workerId);
       } catch (err) {
         showToast('Error loading passport: ' + err.message);
       }
@@ -249,6 +398,28 @@
       document.getElementById('workerRole').textContent = data.role;
       document.getElementById('workerSector').textContent = data.sector;
       document.getElementById('totalWeeksWorked').textContent = `${data.totalWeeksWorked} Weeks Logged`;
+
+      // Pre-fill Experience Box
+      document.getElementById('experienceInput').value = data.experience || '';
+
+      // Set PDF download URL
+      const pdfBtn = document.getElementById('downloadPassportPdfBtn');
+      pdfBtn.href = WorkRightConfig.url(`/api/passport/${data.id}/pdf`);
+
+      // Verification Badge & Certificate
+      const ver = data.verification || {};
+      const certPill = document.getElementById('certIdPill');
+      const certMsg = document.getElementById('certStatusMsg');
+
+      if (ver.isVerified && ver.certificateId) {
+        certPill.className = 'cert-badge';
+        certPill.textContent = '🟢 ' + ver.certificateId;
+        certMsg.textContent = `Official verification granted on ${new Date(ver.verifiedAt || Date.now()).toLocaleDateString()}. Certificate valid.`;
+      } else {
+        certPill.className = 'badge-status badge-seen';
+        certPill.textContent = '🟡 Pending Verification';
+        certMsg.textContent = 'Passport verification is requested. You can download the PDF draft or submit an updated request below.';
+      }
 
       // Compliance
       const comp = data.compliance;
@@ -307,6 +478,124 @@
             ` : ''}
           </div>
         `).join('');
+      }
+    }
+
+    async function loadRequestHistory(workerId) {
+      try {
+        const res = await fetch(WorkRightConfig.url(`/api/passport/${workerId}/requests`));
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update counters
+        document.getElementById('statReqTotal').textContent = data.stats.totalRequested;
+        document.getElementById('statReqGranted').textContent = data.stats.grantedCount;
+        document.getElementById('statReqPending').textContent = data.stats.pendingCount;
+
+        // Render History List
+        const container = document.getElementById('requestHistoryContainer');
+        if (!data.requests || data.requests.length === 0) {
+          container.innerHTML = '<p style="font-size: 13px; color: var(--text-muted);">No verification requests submitted yet. Click "Send Request" above to get verified!</p>';
+          return;
+        }
+
+        container.innerHTML = data.requests.map(req => {
+          let statusBadge = '';
+          if (req.status === 'granted') {
+            statusBadge = '<span class="status-pill status-fair">🟢 Granted</span>';
+          } else if (req.status === 'rejected') {
+            statusBadge = '<span class="status-pill status-violation">🔴 Rejected</span>';
+          } else {
+            statusBadge = '<span class="status-pill status-seen">🟡 Pending Admin</span>';
+          }
+
+          const reqDate = new Date(req.requestedAt).toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'short', year: 'numeric'
+          });
+
+          return `
+            <div class="history-card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>${req.id}</strong>
+                ${statusBadge}
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                Requested on: <strong>${reqDate}</strong>
+              </div>
+              ${req.certificateId ? `
+                <div style="font-size: 12px; color: #166534; font-weight: 700;">
+                  Certificate ID: <code>${req.certificateId}</code>
+                </div>
+              ` : ''}
+              <div style="font-size: 12px; color: #334155; background: #f8fafc; padding: 6px 8px; border-radius: 6px; border: 1px solid #f1f5f9;">
+                <strong>Experience:</strong> ${req.experience || 'Standard trade experience'}
+              </div>
+              ${req.status === 'granted' ? `
+                <div style="margin-top: 4px;">
+                  <a href="${WorkRightConfig.url('/api/passport/' + req.workerId + '/pdf')}" target="_blank" class="btn-touch btn-secondary" style="min-height: 38px; font-size: 12px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 700;">
+                    <span>📥 Download Verified PDF</span>
+                  </a>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load passport requests history:', err);
+      }
+    }
+
+    async function saveExperience(e) {
+      e.preventDefault();
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const experience = document.getElementById('experienceInput').value.trim();
+
+      if (!experience) {
+        showToast('Please enter your work experience description');
+        return;
+      }
+
+      try {
+        const res = await fetch(WorkRightConfig.url(`/api/passport/${workerId}/experience`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ experience })
+        });
+
+        if (!res.ok) throw new Error('Failed to save experience');
+        showToast('Work experience saved successfully! Included in your passport PDF.');
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      }
+    }
+
+    async function requestPassportVerification() {
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const experience = document.getElementById('experienceInput').value.trim();
+
+      const proceed = confirm(
+        'Submit official passport verification request to employer admin?\n\n' +
+        'Your current work experience and verified skills will be submitted for verification.'
+      );
+      if (!proceed) return;
+
+      try {
+        const res = await fetch(WorkRightConfig.url(`/api/passport/${workerId}/request`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            experience: experience || 'Experienced professional with verified trade skills',
+            notes: 'Submitted from worker passport portal'
+          })
+        });
+
+        if (!res.ok) throw new Error('Verification request failed');
+        const data = await res.json();
+
+        showToast('Passport verification request submitted to admin! (Ticket: ' + data.request.id + ')');
+        loadPassport();
+      } catch (err) {
+        showToast('Error: ' + err.message);
       }
     }
 

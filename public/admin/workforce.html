@@ -130,13 +130,16 @@
     </header>
 
     <div class="admin-content">
-      <!-- Tab Navigation: Active Workforce vs Pending Approvals -->
+      <!-- Tab Navigation: Active Workforce vs Pending Approvals vs Passport Requests -->
       <nav class="tab-nav" aria-label="Workforce View Tabs">
         <button type="button" id="tabActiveBtn" class="tab-btn active" onclick="switchTab('active')">
           Active Workforce
         </button>
         <button type="button" id="tabPendingBtn" class="tab-btn" onclick="switchTab('pending')">
           Pending Registrations <span id="pendingBadgeCount" class="pending-badge">0</span>
+        </button>
+        <button type="button" id="tabPassportBtn" class="tab-btn" onclick="switchTab('passport')">
+          Passport Requests <span id="passportBadgeCount" class="pending-badge" style="background: #2563eb;">0</span>
         </button>
       </nav>
 
@@ -236,6 +239,43 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB 3: PASSPORT VERIFICATION REQUESTS -->
+      <section id="sectionPassportRequests" style="display: none;">
+        <div class="table-card" aria-label="Passport Verification Requests">
+          <div class="table-header-bar">
+            <div>
+              <h2 style="font-size: 16px; font-weight: 700;">Skill Passport Verification Queue</h2>
+              <p style="font-size: 13px; color: var(--admin-text-muted);">Review employee work experience &amp; trade skills, grant official certificates, and export verified PDFs</p>
+            </div>
+            <button class="btn-action" onclick="loadPassportRequests()">↻ Refresh Requests</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Request ID</th>
+                  <th scope="col">Worker</th>
+                  <th scope="col">Sector / Role</th>
+                  <th scope="col" style="min-width: 240px;">Documented Work Experience</th>
+                  <th scope="col">Skills Claimed</th>
+                  <th scope="col">Submitted</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Admin Verification</th>
+                </tr>
+              </thead>
+              <tbody id="passportRequestsTableBody">
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                    Loading passport verification requests...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -309,6 +349,7 @@
       updateSectorButtons();
       loadWorkforce();
       loadPendingRequests();
+      loadPassportRequests();
     });
 
     function logoutAdmin() {
@@ -321,6 +362,8 @@
       localStorage.setItem('workright_admin_sector', sec);
       updateSectorButtons();
       loadWorkforce();
+      loadPendingRequests();
+      loadPassportRequests();
     }
 
     function updateSectorButtons() {
@@ -334,18 +377,17 @@
     }
 
     function switchTab(tab) {
-      if (tab === 'active') {
-        document.getElementById('sectionActiveWorkforce').style.display = 'block';
-        document.getElementById('sectionPendingRequests').style.display = 'none';
-        document.getElementById('tabActiveBtn').classList.add('active');
-        document.getElementById('tabPendingBtn').classList.remove('active');
-      } else {
-        document.getElementById('sectionActiveWorkforce').style.display = 'none';
-        document.getElementById('sectionPendingRequests').style.display = 'block';
-        document.getElementById('tabActiveBtn').classList.remove('active');
-        document.getElementById('tabPendingBtn').classList.add('active');
-        loadPendingRequests();
-      }
+      document.getElementById('sectionActiveWorkforce').style.display = tab === 'active' ? 'block' : 'none';
+      document.getElementById('sectionPendingRequests').style.display = tab === 'pending' ? 'block' : 'none';
+      document.getElementById('sectionPassportRequests').style.display = tab === 'passport' ? 'block' : 'none';
+
+      document.getElementById('tabActiveBtn').classList.toggle('active', tab === 'active');
+      document.getElementById('tabPendingBtn').classList.toggle('active', tab === 'pending');
+      document.getElementById('tabPassportBtn').classList.toggle('active', tab === 'passport');
+
+      if (tab === 'active') loadWorkforce();
+      if (tab === 'pending') loadPendingRequests();
+      if (tab === 'passport') loadPassportRequests();
     }
 
     async function loadSectorsConfig() {
@@ -615,6 +657,97 @@
         alert(`✅ Employee Onboarded Successfully!\n\nName: ${data.worker.name}\nEmployee ID: ${data.worker.id}\nUsername: ${data.worker.username}\nSector: ${data.worker.sector.toUpperCase()}\n\nWorker can now log in immediately with either Username or Employee ID!`);
         closeCreateWorkerModal();
         document.getElementById('createWorkerForm').reset();
+        loadWorkforce();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // Passport Verification Requests Queue
+    async function loadPassportRequests() {
+      const tbody = document.getElementById('passportRequestsTableBody');
+      try {
+        const res = await fetch(WorkRightConfig.url(`/api/passport/requests/all?sector=${encodeURIComponent(currentSector)}`));
+        if (!res.ok) throw new Error('Failed to load passport verification requests');
+        const list = await res.json();
+
+        const pendingCount = list.filter(r => r.status === 'pending').length;
+        document.getElementById('passportBadgeCount').textContent = pendingCount;
+
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">No passport verification requests found for ${currentSector} sector.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map(r => {
+          let statusBadge = '';
+          if (r.status === 'granted') {
+            statusBadge = '<span class="status-pill status-fair">🟢 Granted</span>';
+          } else if (r.status === 'rejected') {
+            statusBadge = '<span class="status-pill status-violation">🔴 Rejected</span>';
+          } else {
+            statusBadge = '<span class="status-pill status-seen">🟡 Pending Admin</span>';
+          }
+
+          const reqDate = new Date(r.requestedAt).toLocaleDateString(undefined, {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+          });
+
+          return `
+            <tr>
+              <td><strong>${r.id}</strong></td>
+              <td>
+                <strong>${escapeHtml(r.workerName)}</strong><br>
+                <code style="color: #1e40af; font-size: 11px;">${r.workerId}</code>
+              </td>
+              <td>
+                <span style="text-transform: capitalize;">${escapeHtml(r.sector)}</span><br>
+                <strong style="font-size: 12px;">${escapeHtml(r.role)}</strong>
+              </td>
+              <td>
+                <div style="font-size: 12px; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0; color: #1e293b; max-width: 320px;">
+                  ${escapeHtml(r.experience || 'Standard trade experience')}
+                </div>
+              </td>
+              <td>${(r.skills || []).map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}</td>
+              <td style="font-size: 12px; color: var(--admin-text-muted);">${reqDate}</td>
+              <td>
+                ${statusBadge}
+                ${r.certificateId ? `<br><code style="font-size: 10px; color: #166534; font-weight: 700;">${r.certificateId}</code>` : ''}
+              </td>
+              <td>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  ${r.status === 'pending' ? `
+                    <button class="btn-action btn-action-primary" style="font-size: 11px; padding: 4px 8px; background: #16a34a; border-color: #15803d;" onclick="grantPassport('${r.id}')">
+                      ✓ Verify &amp; Grant
+                    </button>
+                  ` : ''}
+                  <a href="${WorkRightConfig.url('/api/passport/' + r.workerId + '/pdf')}" target="_blank" class="btn-action" style="text-decoration: none; text-align: center; font-size: 11px; padding: 4px 8px;">
+                    📥 Download PDF
+                  </a>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #dc2626;">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function grantPassport(requestId) {
+      if (!confirm('Verify and grant official Skill Passport certificate for this worker?')) return;
+      try {
+        const res = await fetch(WorkRightConfig.url(`/api/passport/requests/${requestId}/grant`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: 'Verified and granted by site administrator' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Granting passport failed');
+
+        alert(`✅ Passport Verification Granted!\n\nCertificate ID: ${data.request.certificateId}\nWorker: ${data.request.workerName} (${data.request.workerId})\n\nThe worker can now download their official verified PDF passport.`);
+        loadPassportRequests();
         loadWorkforce();
       } catch (err) {
         alert('Error: ' + err.message);

@@ -310,6 +310,13 @@ app.get('/passport/:workerId', (req, res) => {
         <span class="field-value">${totalWeeks} Weeks</span>
       </div>
 
+      ${worker.experience ? `
+      <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div class="field-label" style="margin-bottom: 4px;">Verified Work Experience</div>
+        <div style="font-size: 14px; color: var(--text);">${worker.experience}</div>
+      </div>
+      ` : ''}
+
       <div class="skills-section">
         <div class="field-label" style="margin-bottom: 8px;">Certified Trade Skills</div>
         <div>
@@ -319,7 +326,7 @@ app.get('/passport/:workerId', (req, res) => {
     </div>
 
     <div class="footer-actions">
-      <button class="btn btn-secondary" onclick="window.print()">🖨️ Print / Save PDF</button>
+      <a class="btn btn-secondary" href="/api/passport/${worker.id}/pdf" target="_blank" download>📥 Download Official PDF</a>
       <a class="btn btn-primary" href="/worker/passport.html">Open in WorkRight</a>
     </div>
   </main>

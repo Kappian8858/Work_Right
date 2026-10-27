@@ -112,4 +112,70 @@ describe('Skill Passport & Public Credential Verification (routes/passport.js & 
     expect(res.body.qrCode).toMatch(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/);
     expect(res.body.base64).toMatch(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/);
   });
+
+  test('Worker can update their trade experience in passport', async () => {
+    const workerId = 'WRK-C101';
+    const experienceText = '5 years experience in commercial masonry, high-rise plastering, and bricklaying';
+
+    const patchRes = await request(app)
+      .patch(`/api/passport/${workerId}/experience`)
+      .send({ experience: experienceText });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.success).toBe(true);
+    expect(patchRes.body.experience).toBe(experienceText);
+
+    // Verify in GET /api/passport/:workerId
+    const getRes = await request(app).get(`/api/passport/${workerId}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.experience).toBe(experienceText);
+  });
+
+  test('Worker can request passport verification, track history, and admin can grant it', async () => {
+    const workerId = 'WRK-C102';
+
+    // 1. Worker submits passport verification request
+    const reqRes = await request(app)
+      .post(`/api/passport/${workerId}/request`)
+      .send({
+        experience: '4 years of specialized industrial pipeline welding and safety auditing',
+        notes: 'Applying for lead pipefitter verification'
+      });
+
+    expect(reqRes.status).toBe(201);
+    expect(reqRes.body.success).toBe(true);
+    expect(reqRes.body.request.status).toBe('pending');
+    const requestId = reqRes.body.request.id;
+
+    // 2. Worker checks request history
+    const historyRes = await request(app).get(`/api/passport/${workerId}/requests`);
+    expect(historyRes.status).toBe(200);
+    expect(historyRes.body.stats.totalRequested).toBeGreaterThanOrEqual(1);
+    expect(historyRes.body.stats.pendingCount).toBeGreaterThanOrEqual(1);
+
+    // 3. Admin grants verification request
+    const grantRes = await request(app)
+      .post(`/api/passport/requests/${requestId}/grant`)
+      .send({ notes: 'Verified and certified by Chief Safety Inspector' });
+
+    expect(grantRes.status).toBe(200);
+    expect(grantRes.body.success).toBe(true);
+    expect(grantRes.body.request.status).toBe('granted');
+    expect(grantRes.body.request.certificateId).toMatch(/^VPC-2026-/);
+
+    // 4. Verification reflects in worker passport stats
+    const updatedHistory = await request(app).get(`/api/passport/${workerId}/requests`);
+    expect(updatedHistory.body.stats.grantedCount).toBeGreaterThanOrEqual(1);
+  });
+
+  test('Official PDF download endpoint generates a valid PDF stream', async () => {
+    const workerId = 'WRK-C101';
+
+    const pdfRes = await request(app).get(`/api/passport/${workerId}/pdf`);
+
+    expect(pdfRes.status).toBe(200);
+    expect(pdfRes.headers['content-type']).toBe('application/pdf');
+    expect(pdfRes.headers['content-disposition']).toContain('WorkRight-Verified-Passport-WRK-C101.pdf');
+    expect(pdfRes.body.length).toBeGreaterThan(1000); // Verify non-empty binary PDF payload
+  });
 });

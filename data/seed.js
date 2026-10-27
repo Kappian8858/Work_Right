@@ -18,6 +18,7 @@ const initialWorkers = [
     name: 'Ramu Selvam',
     role: 'Mason',
     sector: 'construction',
+    experience: '4 years in commercial bricklaying, plastering, and scaffolding erection',
     skills: ['Bricklaying', 'Scaffolding', 'Safety Protocols'],
     joinedDate: '2024-03-15',
     status: 'active'
@@ -29,6 +30,7 @@ const initialWorkers = [
     name: 'Muthu Kumar',
     role: 'Plumber',
     sector: 'construction',
+    experience: '3 years in industrial pipefitting, drainage, and plumbing systems',
     skills: ['Plumbing', 'Welding', 'Safety Protocols'],
     joinedDate: '2024-04-10',
     status: 'active'
@@ -40,6 +42,7 @@ const initialWorkers = [
     name: 'Karthik Raj',
     role: 'Labourer',
     sector: 'construction',
+    experience: '2 years in site material handling and foundation masonry',
     skills: ['Bricklaying', 'Scaffolding', 'Safety Protocols'],
     joinedDate: '2024-06-01',
     status: 'active'
@@ -51,6 +54,7 @@ const initialWorkers = [
     name: 'Senthil Nathan',
     role: 'Supervisor',
     sector: 'construction',
+    experience: '6 years in multi-story site supervision and safety enforcement',
     skills: ['Scaffolding', 'Electrical Wiring', 'Safety Protocols'],
     joinedDate: '2023-11-20',
     status: 'active'
@@ -62,6 +66,7 @@ const initialWorkers = [
     name: 'Arumugam V',
     role: 'Crane Operator',
     sector: 'construction',
+    experience: '5 years in heavy crane operation and high-elevation lifting',
     skills: ['Welding', 'Scaffolding', 'Safety Protocols'],
     joinedDate: '2024-01-08',
     status: 'active'
@@ -74,6 +79,7 @@ const initialWorkers = [
     name: 'Priya Manoharan',
     role: 'Sanitation Staff',
     sector: 'hospital',
+    experience: '3 years in bio-medical waste handling and hospital sanitation',
     skills: ['Waste Disposal', 'Sanitation Protocols', 'Chemical Handling'],
     joinedDate: '2024-02-12',
     status: 'active'
@@ -85,6 +91,7 @@ const initialWorkers = [
     name: 'Deepa Shankaran',
     role: 'Ward Boy',
     sector: 'hospital',
+    experience: '4 years in emergency patient transport and ward logistics',
     skills: ['Patient Care Support', 'Sanitation Protocols', 'First Aid'],
     joinedDate: '2024-05-18',
     status: 'active'
@@ -96,6 +103,7 @@ const initialWorkers = [
     name: 'Anitha Ravi',
     role: 'Nurse',
     sector: 'hospital',
+    experience: '3 years in acute patient care and sterile dressing procedures',
     skills: ['Patient Care Support', 'First Aid', 'Sanitation Protocols'],
     joinedDate: '2023-09-01',
     status: 'active'
@@ -107,6 +115,7 @@ const initialWorkers = [
     name: 'Suresh Babu',
     role: 'Security',
     sector: 'hospital',
+    experience: '5 years in healthcare facility security and emergency evacuation',
     skills: ['First Aid', 'Safety Protocols', 'Sanitation Protocols'],
     joinedDate: '2024-07-05',
     status: 'active'
@@ -118,6 +127,7 @@ const initialWorkers = [
     name: 'Meena Kumari',
     role: 'Kitchen Staff',
     sector: 'hospital',
+    experience: '3 years in hygienic dietary prep and commercial kitchen sanitation',
     skills: ['Sanitation Protocols', 'Waste Disposal', 'First Aid'],
     joinedDate: '2024-08-14',
     status: 'active'
@@ -377,17 +387,74 @@ const initialHazards = [
   }
 ];
 
+// Seed Historical and Active Passport Verification Requests
+const initialPassportRequests = [
+  {
+    id: 'PAS-REQ-101',
+    workerId: 'WRK-C101',
+    workerName: 'Ramu Selvam',
+    username: 'ramu',
+    sector: 'construction',
+    role: 'Mason',
+    experience: '3 years in commercial brickwork and scaffolding',
+    skills: ['Bricklaying', 'Scaffolding', 'Safety Protocols'],
+    totalWeeksWorked: 1,
+    cleanWeeksCount: 0,
+    requestedAt: new Date(Date.now() - 15 * 86400 * 1000).toISOString(),
+    status: 'granted',
+    certificateId: 'VPC-2026-C101-7891',
+    verifiedAt: new Date(Date.now() - 14 * 86400 * 1000).toISOString(),
+    notes: 'Verified by Site Supervisor. Statutory compliance and trade competency validated.'
+  },
+  {
+    id: 'PAS-REQ-102',
+    workerId: 'WRK-C101',
+    workerName: 'Ramu Selvam',
+    username: 'ramu',
+    sector: 'construction',
+    role: 'Mason',
+    experience: '4 years in commercial bricklaying, plastering, and scaffolding erection',
+    skills: ['Bricklaying', 'Scaffolding', 'Safety Protocols'],
+    totalWeeksWorked: 1,
+    cleanWeeksCount: 0,
+    requestedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    status: 'pending',
+    certificateId: null,
+    verifiedAt: null,
+    notes: 'Annual skill passport renewal request with updated experience.'
+  },
+  {
+    id: 'PAS-REQ-201',
+    workerId: 'WRK-H201',
+    workerName: 'Priya Manoharan',
+    username: 'priya',
+    sector: 'hospital',
+    role: 'Sanitation Staff',
+    experience: '3 years in bio-medical waste handling and hospital sanitation',
+    skills: ['Waste Disposal', 'Sanitation Protocols', 'Chemical Handling'],
+    totalWeeksWorked: 1,
+    cleanWeeksCount: 0,
+    requestedAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+    status: 'pending',
+    certificateId: null,
+    verifiedAt: null,
+    notes: 'Official hospital skill passport verification request.'
+  }
+];
+
 // Active in-memory state
 let workers = JSON.parse(JSON.stringify(initialWorkers));
 let registrationRequests = JSON.parse(JSON.stringify(initialRegistrationRequests));
 let payRecords = JSON.parse(JSON.stringify(initialPayRecords));
 let hazards = JSON.parse(JSON.stringify(initialHazards));
+let passportRequests = JSON.parse(JSON.stringify(initialPassportRequests));
 
 function resetStore() {
   workers = JSON.parse(JSON.stringify(initialWorkers));
   registrationRequests = JSON.parse(JSON.stringify(initialRegistrationRequests));
   payRecords = JSON.parse(JSON.stringify(initialPayRecords));
   hazards = JSON.parse(JSON.stringify(initialHazards));
+  passportRequests = JSON.parse(JSON.stringify(initialPassportRequests));
 }
 
 // Generate unique Employee ID based on sector
@@ -440,6 +507,13 @@ function updateWorkerSkills(workerId, skills) {
   if (Array.isArray(skills)) {
     worker.skills = [...new Set(skills)];
   }
+  return worker;
+}
+
+function updateWorkerExperience(workerId, experience) {
+  const worker = getWorkerById(workerId) || findWorkerByIdOrUsername(workerId);
+  if (!worker) return null;
+  worker.experience = String(experience || '').trim();
   return worker;
 }
 
@@ -732,6 +806,85 @@ function updateHazardStatus(ticketId, status, notes) {
   return hazard;
 }
 
+// Passport Verification Requests
+function getPassportRequests(sector, status) {
+  let list = [...passportRequests];
+  if (sector) {
+    const s = String(sector).trim().toLowerCase();
+    list = list.filter(r => (r.sector || '').toLowerCase() === s);
+  }
+  if (status) {
+    const st = String(status).trim().toLowerCase();
+    list = list.filter(r => (r.status || '').toLowerCase() === st);
+  }
+  return list.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+}
+
+function getWorkerPassportRequests(workerId) {
+  if (!workerId) return [];
+  const idNorm = String(workerId).trim().toUpperCase();
+  return passportRequests
+    .filter(r => r.workerId.toUpperCase() === idNorm)
+    .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+}
+
+function addPassportRequest({ workerId, experience, notes }) {
+  const worker = getWorkerById(workerId) || findWorkerByIdOrUsername(workerId);
+  if (!worker) throw new Error(`Worker ${workerId} not found`);
+
+  if (experience !== undefined && String(experience).trim()) {
+    worker.experience = String(experience).trim();
+  }
+
+  const workerPay = getPayRecordsByWorker(worker.id);
+  const totalWeeks = workerPay.length;
+  const violationsCount = workerPay.filter(p => p.violation).length;
+  const cleanWeeksCount = totalWeeks - violationsCount;
+
+  const reqId = `PAS-REQ-${Math.floor(1000 + Math.random() * 9000)}`;
+  const request = {
+    id: reqId,
+    workerId: worker.id,
+    workerName: worker.name,
+    username: worker.username,
+    sector: worker.sector,
+    role: worker.role,
+    experience: worker.experience || '',
+    skills: worker.skills || ['Safety Protocols'],
+    totalWeeksWorked: totalWeeks,
+    cleanWeeksCount,
+    requestedAt: new Date().toISOString(),
+    status: 'pending',
+    certificateId: null,
+    verifiedAt: null,
+    notes: notes || 'Worker requested official Skill Passport verification'
+  };
+
+  passportRequests.unshift(request);
+  return request;
+}
+
+function grantPassportRequest(requestId, adminNotes) {
+  const req = passportRequests.find(r => r.id === requestId);
+  if (!req) return null;
+
+  req.status = 'granted';
+  req.verifiedAt = new Date().toISOString();
+  req.certificateId = `VPC-2026-${req.workerId.replace('WRK-', '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+  if (adminNotes) req.notes = adminNotes;
+  return req;
+}
+
+function rejectPassportRequest(requestId, adminNotes) {
+  const req = passportRequests.find(r => r.id === requestId);
+  if (!req) return null;
+
+  req.status = 'rejected';
+  req.verifiedAt = new Date().toISOString();
+  req.notes = adminNotes || 'Verification request rejected by administrator.';
+  return req;
+}
+
 // Passport Data Aggregator
 function getWorkerPassportData(workerId) {
   const worker = getWorkerById(workerId) || findWorkerByIdOrUsername(workerId);
@@ -752,12 +905,17 @@ function getWorkerPassportData(workerId) {
     employerNote: p.employerNote || null
   }));
 
+  const requests = getWorkerPassportRequests(worker.id);
+  const grantedRequests = requests.filter(r => r.status === 'granted');
+  const latestGranted = grantedRequests.length > 0 ? grantedRequests[0] : null;
+
   return {
     id: worker.id,
     username: worker.username,
     name: worker.name,
     role: worker.role,
     sector: worker.sector,
+    experience: worker.experience || '',
     skills: worker.skills || [],
     joinedDate: worker.joinedDate,
     totalWeeksWorked: totalWeeks,
@@ -767,6 +925,18 @@ function getWorkerPassportData(workerId) {
       cleanWeeksCount,
       isFullyCompliant: violationsCount === 0
     },
+    verification: {
+      isVerified: Boolean(latestGranted),
+      certificateId: latestGranted ? latestGranted.certificateId : null,
+      verifiedAt: latestGranted ? latestGranted.verifiedAt : null
+    },
+    requestsCount: {
+      total: requests.length,
+      granted: grantedRequests.length,
+      pending: requests.filter(r => r.status === 'pending').length,
+      rejected: requests.filter(r => r.status === 'rejected').length
+    },
+    history: requests,
     timeline
   };
 }
@@ -778,6 +948,7 @@ module.exports = {
   findWorkerByIdOrUsername,
   authenticateWorker,
   updateWorkerSkills,
+  updateWorkerExperience,
   getRegistrationRequests,
   addRegistrationRequest,
   approveRegistrationRequest,
@@ -791,6 +962,11 @@ module.exports = {
   getHazardById,
   addHazard,
   updateHazardStatus,
+  getPassportRequests,
+  getWorkerPassportRequests,
+  addPassportRequest,
+  grantPassportRequest,
+  rejectPassportRequest,
   getWorkerPassportData,
   resetWorkerPassword
 };
