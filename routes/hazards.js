@@ -12,25 +12,46 @@ const {
   updateHazardStatus
 } = require('../data/seed');
 const { requireAdminToken } = require('../middleware/auth');
+const { translateHazardDescription } = require('../logic/translator');
 
 /**
  * POST /api/hazards
- * Report a new workplace hazard.
+ * Report a new workplace hazard (Supports Tamil, Hindi, English bilingual reports).
  */
 router.post('/', (req, res) => {
   try {
-    const { sector, category, description, anonymous, workerName, workerId } = req.body;
+    const {
+      sector,
+      category,
+      description,
+      descriptionNative,
+      descriptionEnglish,
+      language,
+      anonymous,
+      workerName,
+      workerId
+    } = req.body;
 
-    if (!description || !String(description).trim()) {
+    const rawInput = descriptionNative || description;
+    if (!rawInput || !String(rawInput).trim()) {
       return res.status(400).json({ error: 'Hazard description is required' });
     }
 
     const isAnonymous = anonymous === true || anonymous === 'true' || anonymous === 'on' || anonymous === undefined;
 
+    // Multilingual translation to English and language detection
+    const translation = translateHazardDescription(rawInput);
+    const resolvedLanguage = language || translation.language;
+    const resolvedNative = descriptionNative || translation.original;
+    const resolvedEnglish = descriptionEnglish || translation.english;
+
     const newHazard = addHazard({
       sector,
       category,
-      description,
+      description: resolvedEnglish,
+      descriptionNative: resolvedNative,
+      descriptionEnglish: resolvedEnglish,
+      language: resolvedLanguage,
       anonymous: isAnonymous,
       workerName: isAnonymous ? undefined : workerName,
       workerId: isAnonymous ? undefined : workerId

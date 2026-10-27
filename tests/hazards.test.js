@@ -143,4 +143,40 @@ describe('Hazard Management & Reporting (routes/hazards.js & data/seed.js)', () 
     expect(fetchRes.body.reportedBy).toBe('Anonymous');
     expect(fetchRes.body.workerName).toBeUndefined();
   });
+
+  test('Tamil hazard submission preserves native Tamil and translates to English', async () => {
+    const res = await request(app)
+      .post('/api/hazards')
+      .send({
+        sector: 'construction',
+        category: 'Electrical',
+        description: 'மின்சார கம்பி மற்றும் தீ விபத்து இரண்டாவது மாடி',
+        anonymous: true
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.hazard.language).toBe('Tamil');
+    expect(res.body.hazard.descriptionNative).toContain('மின்சார கம்பி');
+    expect(res.body.hazard.descriptionEnglish.toLowerCase()).toContain('electrical wire');
+    expect(res.body.hazard.descriptionEnglish.toLowerCase()).toContain('fire incident');
+  });
+
+  test('Hindi hazard submission preserves native Hindi and translates to English', async () => {
+    const res = await request(app)
+      .post('/api/hazards')
+      .send({
+        sector: 'hospital',
+        category: 'Chemical',
+        description: 'केमिकल रिसाव और बायोमेडिकल कचरा',
+        anonymous: false,
+        workerName: 'Deepa Shankaran',
+        workerId: 'WRK-H202'
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.hazard.language).toBe('Hindi');
+    expect(res.body.hazard.descriptionNative).toContain('केमिकल रिसाव');
+    expect(res.body.hazard.descriptionEnglish.toLowerCase()).toContain('chemical spill');
+    expect(res.body.hazard.descriptionEnglish.toLowerCase()).toContain('biomedical waste');
+  });
 });

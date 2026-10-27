@@ -56,6 +56,65 @@
     input:checked + .slider:before {
       transform: translateX(24px);
     }
+    .lang-chips {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+    .speech-lang-btn {
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 2px solid var(--border-color);
+      background: #ffffff;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .speech-lang-btn.active {
+      background: #1d4ed8;
+      color: #ffffff;
+      border-color: #1e40af;
+      box-shadow: 0 4px 6px -1px rgba(29, 78, 216, 0.2);
+    }
+    .sample-chip {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.15s;
+      width: 100%;
+    }
+    .sample-chip:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+    .bilingual-preview {
+      background: #f0fdf4;
+      border: 2px solid #86efac;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+      margin-bottom: 18px;
+    }
+    .bilingual-row {
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .bilingual-row:last-child {
+      margin-bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -66,9 +125,9 @@
       <span class="brand-name">WorkRight</span>
     </a>
     <nav class="lang-toggle-group" aria-label="Language Selector">
-      <button class="lang-btn active" data-lang="en" aria-label="English">EN</button>
-      <button class="lang-btn" data-lang="ta" aria-label="தமிழ்">தமிழ்</button>
-      <button class="lang-btn" data-lang="hi" aria-label="हिंदी">हिंदी</button>
+      <button class="lang-btn active" data-lang="en" onclick="setAppLanguage('en')" aria-label="English">EN</button>
+      <button class="lang-btn" data-lang="ta" onclick="setAppLanguage('ta')" aria-label="தமிழ்">தமிழ்</button>
+      <button class="lang-btn" data-lang="hi" onclick="setAppLanguage('hi')" aria-label="हिंदी">हिंदी</button>
     </nav>
   </header>
 
@@ -84,12 +143,28 @@
 
   <main class="container" role="main">
     <div style="margin-bottom: 16px;">
-      <h1 class="page-title" data-i18n="hazard_title">Safe & Voice-Driven Hazard Reporter</h1>
-      <p class="page-subtitle" data-i18n="hazard_subtitle">Speak in your language. Keep your workplace safe without fear.</p>
+      <h1 class="page-title" data-i18n="hazard_title">Safe & Multilingual Hazard Reporter</h1>
+      <p class="page-subtitle" data-i18n="hazard_subtitle">Speak in Tamil, Hindi, or English. Transcribed and auto-translated for management.</p>
     </div>
 
     <!-- Hazard Submission Card -->
     <section class="card" aria-label="Hazard Report Form">
+      <!-- Speech Language Selector -->
+      <div style="text-align: center; margin-bottom: 8px;">
+        <label class="form-label" style="font-size: 13px; margin-bottom: 6px;">Select Voice Language / மொழி / भाषा:</label>
+        <div class="lang-chips" role="radiogroup" aria-label="Voice Language">
+          <button type="button" class="speech-lang-btn" id="btnLangTa" onclick="setVoiceLang('ta')">
+            <span>🇮🇳</span> தமிழ் (Tamil)
+          </button>
+          <button type="button" class="speech-lang-btn" id="btnLangHi" onclick="setVoiceLang('hi')">
+            <span>🇮🇳</span> हिंदी (Hindi)
+          </button>
+          <button type="button" class="speech-lang-btn active" id="btnLangEn" onclick="setVoiceLang('en')">
+            <span>🌐</span> English
+          </button>
+        </div>
+      </div>
+
       <!-- One Large Microphone Button in Center -->
       <div class="mic-container">
         <button
@@ -105,21 +180,54 @@
         <div id="micStatus" class="mic-status-text" data-i18n="hazard_mic_button">
           🎙️ Tap to Speak Hazard
         </div>
+        <div id="micSupportNote" style="font-size: 12px; color: var(--text-muted); margin-top: 4px; text-align: center;">
+          Runs 100% free in your browser. Zero paid API keys required.
+        </div>
+      </div>
+
+      <!-- 1-Click Simulation Test Section (Guaranteed Testing) -->
+      <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+        <div style="font-weight: 700; font-size: 13px; margin-bottom: 8px; color: #1e3a8a; display: flex; align-items: center; justify-content: space-between;">
+          <span>⚡ 1-Click Test Simulation (No Mic Needed):</span>
+          <span style="font-size: 11px; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px;">Click to test</span>
+        </div>
+        <div id="sampleChipsContainer">
+          <!-- Dynamically populated sample phrases -->
+        </div>
       </div>
 
       <form id="hazardForm" onsubmit="submitHazard(event)">
         <!-- Editable Transcribed Text Area -->
         <div class="form-group">
-          <label for="descInput" class="form-label" data-i18n="hazard_desc_label">Hazard Description</label>
+          <label for="descInput" class="form-label">
+            <span data-i18n="hazard_desc_label">Hazard Description</span>
+            <span id="activeLangTag" style="font-size: 11px; font-weight: normal; color: #2563eb; margin-left: 6px;">[English voice]</span>
+          </label>
           <textarea
             id="descInput"
             class="form-textarea"
             rows="3"
-            placeholder="Tap mic above to speak or type description here..."
+            placeholder="Tap mic above to speak in your language or type description here..."
             required
             aria-required="true"
             oninput="handleTextTyping(this.value)"
           ></textarea>
+        </div>
+
+        <!-- Bilingual Preview Card -->
+        <div id="bilingualCard" class="bilingual-preview" style="display: none;">
+          <div style="font-weight: 700; color: #166534; font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <span>🌐 Bilingual Report Preview (For Employer Admin):</span>
+            <span id="previewLangBadge" style="background: #166534; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">Tamil</span>
+          </div>
+          <div class="bilingual-row">
+            <strong>🗣️ Native Language:</strong>
+            <span id="previewNativeText" style="color: #0f172a;">-</span>
+          </div>
+          <div class="bilingual-row">
+            <strong>🇬🇧 English Translation:</strong>
+            <span id="previewEnglishText" style="color: #1e3a8a; font-weight: 600;">-</span>
+          </div>
         </div>
 
         <!-- Hazard Category Dropdown -->
@@ -167,11 +275,18 @@
       <h2 style="color: #166534; font-size: 18px; margin-bottom: 8px;" data-i18n="hazard_submitted_title">
         Hazard Reported Successfully
       </h2>
-      <p style="font-size: 14px; margin-bottom: 12px;">Save this ticket ID to track resolution status:</p>
+      <p style="font-size: 14px; margin-bottom: 12px;">Sent to employer admin in both native language and English translation:</p>
+      
       <div style="background: white; border: 2px dashed #86efac; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 12px;">
         <span style="font-size: 12px; color: var(--text-muted); display: block;" data-i18n="hazard_ticket_label">Your Ticket ID</span>
         <strong id="createdTicketId" style="font-size: 22px; color: #1e3a8a; letter-spacing: 1px;">HAZ-2026-XXXX</strong>
       </div>
+
+      <div id="submittedBilingualSummary" style="font-size: 13px; background: #ffffff; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+        <div><strong>Native:</strong> <span id="confNativeText"></span></div>
+        <div style="margin-top: 4px;"><strong>English:</strong> <span id="confEngText"></span></div>
+      </div>
+
       <div style="display: flex; align-items: center; justify-content: space-between;">
         <span data-i18n="hazard_status_label">Current Status:</span>
         <span class="badge-status badge-reported" data-i18n="hazard_status_reported">🔴 Reported</span>
@@ -211,10 +326,13 @@
           <strong>Category:</strong> <span id="resCategory">Chemical</span>
         </div>
         <div style="font-size: 14px; margin-bottom: 6px;">
-          <strong>Reported:</strong> <span id="resReportedBy">Anonymous</span>
+          <strong>Reported By:</strong> <span id="resReportedBy">Anonymous</span>
         </div>
-        <div style="font-size: 13px; color: var(--text-muted); background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-          <span id="resDescription">Description</span>
+        <div style="font-size: 13px; color: var(--text-muted); background: white; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <div><strong>English Description:</strong> <span id="resDescription"></span></div>
+          <div id="resNativeRow" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0; display: none;">
+            <strong>Original Speech:</strong> <span id="resDescriptionNative"></span>
+          </div>
         </div>
         <div id="resNotesRow" style="font-size: 13px; color: #166534; margin-top: 8px; display: none;">
           <strong>Supervisor Action:</strong> <span id="resNotes">Action taken</span>
@@ -248,12 +366,69 @@
   <script src="/js/speech.js"></script>
   <script>
     let isRecording = false;
+    let selectedVoiceLang = 'en';
 
     document.addEventListener('DOMContentLoaded', () => {
       I18N.init(() => {
         loadWorkerContext();
+        // Sync voice lang with current app lang if available
+        if (I18N.currentLang === 'ta' || I18N.currentLang === 'hi') {
+          setVoiceLang(I18N.currentLang);
+        } else {
+          setVoiceLang('en');
+        }
       });
     });
+
+    function setAppLanguage(lang) {
+      I18N.setLang(lang);
+      setVoiceLang(lang);
+    }
+
+    function setVoiceLang(lang) {
+      selectedVoiceLang = lang;
+      document.querySelectorAll('.speech-lang-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(
+        lang === 'ta' ? 'btnLangTa' : (lang === 'hi' ? 'btnLangHi' : 'btnLangEn')
+      );
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const tag = document.getElementById('activeLangTag');
+      if (tag) {
+        tag.textContent = lang === 'ta' ? '[தமிழ் voice / Tamil]' : (lang === 'hi' ? '[हिंदी voice / Hindi]' : '[English voice]');
+      }
+
+      renderSampleChips(lang);
+    }
+
+    function renderSampleChips(lang) {
+      const container = document.getElementById('sampleChipsContainer');
+      const phrases = VoiceAssistant.samplePhrases[lang] || VoiceAssistant.samplePhrases.en;
+
+      container.innerHTML = phrases.map(p => `
+        <button type="button" class="sample-chip" onclick="simulateSpeech('${escapeQuote(p.text)}', '${p.category}')">
+          <span>🗣️ "${p.text}"</span>
+          <span style="font-size: 11px; font-weight: 700; color: #1e40af; margin-left: 8px;">[${p.category}]</span>
+        </button>
+      `).join('');
+    }
+
+    function escapeQuote(str) {
+      return str.replace(/'/g, "\\'");
+    }
+
+    function simulateSpeech(text, category) {
+      const descInput = document.getElementById('descInput');
+      descInput.value = text;
+      handleTextTyping(text);
+
+      if (category) {
+        document.getElementById('categorySelect').value = category;
+        document.getElementById('categoryHint').style.display = 'block';
+      }
+
+      showToast('Simulated speech input in ' + (selectedVoiceLang === 'ta' ? 'Tamil' : (selectedVoiceLang === 'hi' ? 'Hindi' : 'English')));
+    }
 
     function loadWorkerContext() {
       const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
@@ -273,22 +448,22 @@
         isRecording = false;
         micBtn.classList.remove('recording');
         micBtn.setAttribute('aria-pressed', 'false');
-        micStatus.textContent = I18N.t('hazard_mic_button');
+        micStatus.textContent = I18N.t('hazard_mic_button') || '🎙️ Tap to Speak Hazard';
         return;
       }
 
-      const lang = I18N.currentLang;
       VoiceAssistant.startListening({
-        lang: lang,
+        lang: selectedVoiceLang,
         onStart: () => {
           isRecording = true;
           micBtn.classList.add('recording');
           micBtn.setAttribute('aria-pressed', 'true');
-          micStatus.textContent = I18N.t('hazard_listening');
+          micStatus.textContent = '🔴 Listening... Speak clearly into your mic';
         },
         onResult: (result) => {
           const descInput = document.getElementById('descInput');
           descInput.value = result.text;
+          updateBilingualPreview(result.text, result.englishText, result.detectedLang);
 
           if (result.suggestedCategory) {
             document.getElementById('categorySelect').value = result.suggestedCategory;
@@ -299,14 +474,14 @@
           isRecording = false;
           micBtn.classList.remove('recording');
           micBtn.setAttribute('aria-pressed', 'false');
-          micStatus.textContent = I18N.t('hazard_mic_button');
-          showToast('Speech recognition note: ' + err);
+          micStatus.textContent = '🎙️ Tap to Speak Hazard';
+          showToast(err.message || 'Microphone note: using fallback simulation');
         },
         onEnd: () => {
           isRecording = false;
           micBtn.classList.remove('recording');
           micBtn.setAttribute('aria-pressed', 'false');
-          micStatus.textContent = I18N.t('hazard_mic_button');
+          micStatus.textContent = '🎙️ Tap to Speak Hazard';
         }
       });
     }
@@ -317,21 +492,50 @@
         document.getElementById('categorySelect').value = suggested;
         document.getElementById('categoryHint').style.display = 'block';
       }
+
+      const eng = VoiceAssistant.translateToEnglish(text);
+      const detectedLang = VoiceAssistant.detectLanguage(text);
+      updateBilingualPreview(text, eng, detectedLang);
+    }
+
+    function updateBilingualPreview(nativeText, englishText, langCode) {
+      const card = document.getElementById('bilingualCard');
+      if (!nativeText || !nativeText.trim()) {
+        card.style.display = 'none';
+        return;
+      }
+
+      card.style.display = 'block';
+      document.getElementById('previewNativeText').textContent = nativeText;
+      document.getElementById('previewEnglishText').textContent = englishText || nativeText;
+      
+      const badge = document.getElementById('previewLangBadge');
+      if (langCode === 'ta') {
+        badge.textContent = '🇮🇳 Tamil -> English';
+      } else if (langCode === 'hi') {
+        badge.textContent = '🇮🇳 Hindi -> English';
+      } else {
+        badge.textContent = '🌐 English';
+      }
     }
 
     async function submitHazard(e) {
       e.preventDefault();
-      const description = document.getElementById('descInput').value.trim();
+      const rawText = document.getElementById('descInput').value.trim();
       const category = document.getElementById('categorySelect').value;
       const anonymous = document.getElementById('anonToggle').checked;
       const sector = localStorage.getItem('workright_worker_sector') || 'construction';
       const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
       const workerName = localStorage.getItem('workright_worker_name') || 'Ramu Selvam';
 
-      if (!description) {
-        showToast('Please describe the hazard');
+      if (!rawText) {
+        showToast('Please speak or type a hazard description');
         return;
       }
+
+      const langCode = VoiceAssistant.detectLanguage(rawText);
+      const langName = langCode === 'ta' ? 'Tamil' : (langCode === 'hi' ? 'Hindi' : 'English');
+      const englishText = VoiceAssistant.translateToEnglish(rawText);
 
       try {
         const res = await fetch(WorkRightConfig.url('/api/hazards'), {
@@ -340,7 +544,10 @@
           body: JSON.stringify({
             sector,
             category,
-            description,
+            description: englishText || rawText,
+            descriptionNative: rawText,
+            descriptionEnglish: englishText || rawText,
+            language: langName,
             anonymous,
             workerId: anonymous ? null : workerId,
             workerName: anonymous ? null : workerName
@@ -353,13 +560,16 @@
         // Show ticket confirmation
         document.getElementById('submissionSuccess').style.display = 'block';
         document.getElementById('createdTicketId').textContent = data.ticketId;
+        document.getElementById('confNativeText').textContent = rawText;
+        document.getElementById('confEngText').textContent = englishText || rawText;
 
         // Reset form
         document.getElementById('descInput').value = '';
         document.getElementById('categoryHint').style.display = 'none';
+        document.getElementById('bilingualCard').style.display = 'none';
 
         document.getElementById('submissionSuccess').scrollIntoView({ behavior: 'smooth' });
-        showToast('Hazard reported successfully');
+        showToast('Hazard reported in ' + langName + ' and translated to English for Admin!');
       } catch (err) {
         showToast('Error: ' + err.message);
       }
@@ -381,7 +591,15 @@
         document.getElementById('resTicketId').textContent = data.id;
         document.getElementById('resCategory').textContent = data.category;
         document.getElementById('resReportedBy').textContent = data.reportedBy;
-        document.getElementById('resDescription').textContent = data.description;
+        document.getElementById('resDescription').textContent = data.descriptionEnglish || data.description;
+
+        const nativeRow = document.getElementById('resNativeRow');
+        if (data.descriptionNative && data.descriptionNative !== data.description) {
+          nativeRow.style.display = 'block';
+          document.getElementById('resDescriptionNative').textContent = `[${data.language || 'Native'}]: ${data.descriptionNative}`;
+        } else {
+          nativeRow.style.display = 'none';
+        }
 
         const badge = document.getElementById('resStatusBadge');
         if (data.status === 'Reported') {
@@ -411,7 +629,7 @@
       const toast = document.getElementById('toast');
       toast.textContent = msg;
       toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
     }
   </script>
 </body>

@@ -6,6 +6,7 @@
  */
 
 const { calculateExpectedPay, checkViolation } = require('../logic/payCalculator');
+const { translateHazardDescription } = require('../logic/translator');
 
 // Initial seed workers (10 workers: 5 construction, 5 hospital)
 const initialWorkers = [
@@ -289,17 +290,23 @@ const initialHazards = [
     id: 'HAZ-2026-001',
     sector: 'hospital',
     category: 'Chemical',
+    language: 'Tamil',
+    descriptionNative: 'இரண்டாவது மாடி அவசர சிகிச்சை அருகில் ரசாயன கசிவு உள்ளது, வழுக்கும் தரை',
+    descriptionEnglish: 'Chemical spill near 2nd floor ICU corridor, pungent odor and slippery surface',
     description: 'Chemical spill near 2nd floor ICU corridor, pungent odor and slippery surface',
     anonymous: true,
     reportedBy: 'Anonymous',
     createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
     status: 'Reported',
-    notes: 'Report received via voice input.'
+    notes: 'Report received via Tamil voice input.'
   },
   {
     id: 'HAZ-2026-002',
     sector: 'construction',
     category: 'Fall',
+    language: 'English',
+    descriptionNative: 'Missing safety harness anchor line on 4th floor scaffolding east wing',
+    descriptionEnglish: 'Missing safety harness anchor line on 4th floor scaffolding east wing',
     description: 'Missing safety harness anchor line on 4th floor scaffolding east wing',
     anonymous: false,
     reportedBy: 'Ramu Selvam',
@@ -313,6 +320,9 @@ const initialHazards = [
     id: 'HAZ-2026-003',
     sector: 'hospital',
     category: 'Biological',
+    language: 'Hindi',
+    descriptionNative: 'बायोमेडिकल कचरा रूम B में सुई और अपशिष्ट का डब्बा भर गया है',
+    descriptionEnglish: 'Improperly disposed sharps container overflowing in waste room B',
     description: 'Improperly disposed sharps container overflowing in waste room B',
     anonymous: true,
     reportedBy: 'Anonymous',
@@ -324,6 +334,9 @@ const initialHazards = [
     id: 'HAZ-2026-004',
     sector: 'construction',
     category: 'Electrical',
+    language: 'Tamil',
+    descriptionNative: 'பிளாக் சி நுழைவாயில் அருகில் தண்ணீர் தேக்கத்தில் மின்சார கம்பி கிடக்கிறது',
+    descriptionEnglish: 'Exposed live wiring near cement mixer puddle at block C entrance',
     description: 'Exposed live wiring near cement mixer puddle at block C entrance',
     anonymous: false,
     reportedBy: 'Muthu Kumar',
@@ -337,6 +350,9 @@ const initialHazards = [
     id: 'HAZ-2026-005',
     sector: 'construction',
     category: 'Structural',
+    language: 'English',
+    descriptionNative: 'Cracked temporary support beam during basement excavation',
+    descriptionEnglish: 'Cracked temporary support beam during basement excavation',
     description: 'Cracked temporary support beam during basement excavation',
     anonymous: false,
     reportedBy: 'Senthil Nathan',
@@ -349,6 +365,9 @@ const initialHazards = [
     id: 'HAZ-2026-006',
     sector: 'hospital',
     category: 'Sanitation',
+    language: 'Hindi',
+    descriptionNative: 'ग्राउंड फ्लोर इमरजेंसी शौचालय में नाली जाम और गंदा पानी भर गया',
+    descriptionEnglish: 'Blocked drainage in ground floor emergency washrooms causing backflow',
     description: 'Blocked drainage in ground floor emergency washrooms causing backflow',
     anonymous: true,
     reportedBy: 'Anonymous',
@@ -648,15 +667,40 @@ function getHazardById(ticketId) {
   return hazards.find(h => h.id.toUpperCase() === idNorm) || null;
 }
 
-function addHazard({ sector, category, description, anonymous = true, workerName, workerId }) {
+function addHazard({
+  sector,
+  category,
+  description,
+  descriptionNative,
+  descriptionEnglish,
+  language,
+  anonymous = true,
+  workerName,
+  workerId
+}) {
   const ticketId = `HAZ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
   const isAnon = anonymous === true || anonymous === 'true' || anonymous === 'on';
+
+  const rawInput = descriptionNative || description || '';
+  let lang = language;
+  let engText = descriptionEnglish || '';
+  let nativeText = descriptionNative || '';
+
+  if (!engText || !lang || !nativeText) {
+    const tr = translateHazardDescription(rawInput);
+    lang = lang || tr.language;
+    engText = engText || tr.english;
+    nativeText = nativeText || tr.original;
+  }
 
   const newHazard = {
     id: ticketId,
     sector: sector ? String(sector).toLowerCase() : 'construction',
     category: category || 'General',
-    description: String(description || '').trim(),
+    description: engText,
+    descriptionEnglish: engText,
+    descriptionNative: nativeText,
+    language: lang || 'English',
     anonymous: isAnon,
     reportedBy: isAnon ? 'Anonymous' : (workerName || 'Worker'),
     workerId: isAnon ? null : (workerId || null),

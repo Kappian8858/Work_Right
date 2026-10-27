@@ -112,7 +112,7 @@
               <tr>
                 <th scope="col">Ticket ID</th>
                 <th scope="col">Category</th>
-                <th scope="col">Description</th>
+                <th scope="col" style="min-width: 260px;">Bilingual Description (English & Native)</th>
                 <th scope="col">Reported By</th>
                 <th scope="col">Time Reported</th>
                 <th scope="col">Hours Open</th>
@@ -226,9 +226,20 @@
       updateStats(openCount, criticalCount, resolvedCount);
 
       tbody.innerHTML = computed.map(h => {
-        const shortDesc = h.description.length > 60
-          ? `${escapeHtml(h.description.slice(0, 60))}...`
-          : escapeHtml(h.description);
+        const engDesc = h.descriptionEnglish || h.description || '';
+        const nativeDesc = h.descriptionNative || h.description || '';
+        const lang = h.language || 'English';
+
+        let descHtml = `<div style="font-weight: 600; color: #0f172a; margin-bottom: 4px;">${escapeHtml(engDesc)}</div>`;
+        if (nativeDesc && (lang === 'Tamil' || lang === 'Hindi' || nativeDesc !== engDesc)) {
+          const langFlag = lang === 'Tamil' ? '🇮🇳 தமிழ் (Tamil)' : (lang === 'Hindi' ? '🇮🇳 हिंदी (Hindi)' : lang);
+          descHtml += `
+            <div style="font-size: 12px; color: #475569; display: flex; align-items: flex-start; gap: 6px; margin-top: 4px;">
+              <span style="background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; font-weight: 700; white-space: nowrap; font-size: 11px;">${langFlag}</span>
+              <span style="font-style: italic; color: #334155;">"${escapeHtml(nativeDesc)}"</span>
+            </div>
+          `;
+        }
 
         const isCritical = criticalCategories.includes(h.category);
         const categoryBadge = isCritical
@@ -252,7 +263,7 @@
           <tr>
             <td><strong>${h.id}</strong></td>
             <td>${categoryBadge}</td>
-            <td title="${escapeHtml(h.description)}">${shortDesc}</td>
+            <td style="max-width: 320px;">${descHtml}</td>
             <td>
               ${h.anonymous ? '<em style="color: var(--admin-text-muted);">Anonymous</em>' : escapeHtml(h.reportedBy)}
             </td>

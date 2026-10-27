@@ -49,6 +49,14 @@ const translationDict = {
     { from: /ஊசி/gi, to: 'used syringe needles' },
     { from: /இரத்தம்/gi, to: 'blood spill' },
     { from: /ஆபத்து/gi, to: 'danger' },
+    { from: /மற்றும்/gi, to: 'and' },
+    { from: /அல்லது/gi, to: 'or' },
+    { from: /உடன்/gi, to: 'with' },
+    { from: /இல்/gi, to: 'in' },
+    { from: /மேல்/gi, to: 'on' },
+    { from: /கீழ்/gi, to: 'under' },
+    { from: /மிகவும்/gi, to: 'severe' },
+    { from: /இங்கே/gi, to: 'here' },
     { from: /உள்ளது/gi, to: 'detected' },
     { from: /அருகில்/gi, to: 'near' },
     { from: /கண்டேன்/gi, to: 'observed' }
@@ -61,7 +69,7 @@ const translationDict = {
     { from: /खुला तार/gi, to: 'exposed live wire' },
     { from: /शॉर्ट सर्किट/gi, to: 'short circuit' },
     { from: /करंट लग रहा/gi, to: 'electric shock risk' },
-    { from: /बायोमेडिकल कचरा/gi, to: 'biomedical waste overflow' },
+    { from: /बायोमेडिकल कचरा/gi, to: 'biomedical waste' },
     { from: /दीवार में दरार/gi, to: 'crack in the wall' },
     { from: /छत गिर रही/gi, to: 'ceiling collapsing risk' },
     { from: /नाली जाम/gi, to: 'drainage blockage' },
@@ -95,6 +103,14 @@ const translationDict = {
     { from: /फिसलन/gi, to: 'slippery floor' },
     { from: /गिरना/gi, to: 'fall risk' },
     { from: /बदबू/gi, to: 'pungent smell' },
+    { from: /और/gi, to: 'and' },
+    { from: /या/gi, to: 'or' },
+    { from: /के साथ/gi, to: 'with' },
+    { from: /में/gi, to: 'in' },
+    { from: /पर/gi, to: 'on' },
+    { from: /नीचे/gi, to: 'under' },
+    { from: /यहाँ|यहां/gi, to: 'here' },
+    { from: /बहुत/gi, to: 'severe' },
     { from: /पास/gi, to: 'near' },
     { from: /है/gi, to: 'reported' }
   ]
@@ -140,17 +156,21 @@ function translateHazardDescription(text) {
   }
 
   let translated = trimmed;
+  let matchesCount = 0;
   const rules = lang === 'Tamil' ? translationDict.tamil : translationDict.hindi;
 
   for (const rule of rules) {
-    translated = translated.replace(rule.from, rule.to);
+    if (rule.from.test(translated)) {
+      matchesCount++;
+      translated = translated.replace(rule.from, rule.to);
+    }
   }
 
   // Clean up any double spaces
   translated = translated.replace(/\s+/g, ' ').trim();
 
-  // If translation couldn't find terms, append contextual tag
-  if (detectLanguage(translated) !== 'English') {
+  // If no workplace terms matched at all
+  if (matchesCount === 0 && translated === trimmed) {
     translated = `[Reported in ${lang}]: ${trimmed} (Workplace incident requiring supervisor review)`;
   } else {
     // Capitalize first letter
