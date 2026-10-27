@@ -185,6 +185,15 @@ router.patch('/:workerId/experience', (req, res) => {
   }
 });
 
+function getPublicBaseUrl(req) {
+  if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/$/, '');
+  if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '');
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL.replace(/\/$/, '')}`;
+  const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
+  const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:8080';
+  return `${proto}://${host}`;
+}
+
 /**
  * GET /api/passport/:workerId/qr
  * Generate and return QR code as base64 PNG data URL pointing to the public passport URL.
@@ -198,9 +207,7 @@ router.get('/:workerId/qr', async (req, res) => {
       return res.status(404).json({ error: `Worker ${workerId} not found` });
     }
 
-    const host = req.get('host') || 'localhost:8080';
-    const protocol = req.protocol || 'http';
-    const publicUrl = `${protocol}://${host}/passport/${worker.id}`;
+    const publicUrl = `${getPublicBaseUrl(req)}/passport/${worker.id}`;
 
     const qrDataUrl = await QRCode.toDataURL(publicUrl, {
       errorCorrectionLevel: 'M',
@@ -237,9 +244,7 @@ router.get('/:workerId/pdf', async (req, res) => {
     }
 
     const passport = getWorkerPassportData(worker.id);
-    const host = req.get('host') || 'localhost:8080';
-    const protocol = req.protocol || 'http';
-    const publicUrl = `${protocol}://${host}/passport/${worker.id}`;
+    const publicUrl = `${getPublicBaseUrl(req)}/passport/${worker.id}`;
 
     // Generate QR code buffer for embedding into PDF
     const qrBuffer = await QRCode.toBuffer(publicUrl, {

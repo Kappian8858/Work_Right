@@ -25,6 +25,9 @@ const authRouter = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Trust reverse proxy for HTTPS headers on Render and Vercel
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: '*',
