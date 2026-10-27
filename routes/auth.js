@@ -13,7 +13,8 @@ const {
   addRegistrationRequest,
   approveRegistrationRequest,
   rejectRegistrationRequest,
-  adminCreateWorker
+  adminCreateWorker,
+  resetWorkerPassword
 } = require('../data/seed');
 const { requireAdminToken } = require('../middleware/auth');
 
@@ -226,6 +227,34 @@ router.post('/admin/workers', requireAdminToken, (req, res) => {
     });
   } catch (err) {
     return res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/workers/:identifier/reset-password
+ * Reset worker password to specified value (or defaults to 'password123')
+ */
+router.post('/admin/workers/:identifier/reset-password', requireAdminToken, (req, res) => {
+  try {
+    const { identifier } = req.params;
+    const { password = 'password123' } = req.body;
+    const worker = resetWorkerPassword(identifier, password);
+
+    if (!worker) {
+      return res.status(404).json({ error: `Worker ${identifier} not found` });
+    }
+
+    return res.json({
+      success: true,
+      message: `Password for worker ${worker.name} (${worker.id}) reset to: ${password}`,
+      worker: {
+        id: worker.id,
+        username: worker.username,
+        name: worker.name
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 

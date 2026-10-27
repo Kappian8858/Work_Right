@@ -104,6 +104,17 @@
 
       <!-- TAB 1: WORKER LOGIN FORM -->
       <div id="tabLoginForm">
+        <!-- Error Banner -->
+        <div id="loginErrorAlert" class="banner banner-violation" style="display: none; margin-bottom: 16px;" role="alert">
+          <span aria-hidden="true">⚠️</span>
+          <span id="loginErrorText">Error message</span>
+        </div>
+
+        <!-- Success/Info Banner -->
+        <div id="loginInfoAlert" class="notice-box" style="display: none; margin-bottom: 16px;">
+          <span id="loginInfoText">Notice text</span>
+        </div>
+
         <form id="workerLoginForm" onsubmit="handleWorkerLogin(event)">
           <div class="form-group">
             <label for="loginIdentifier" class="form-label">Username or Employee ID</label>
@@ -112,12 +123,11 @@
               id="loginIdentifier"
               class="form-input"
               placeholder="e.g. ramu OR WRK-C101"
-              value="ramu"
               required
               autocomplete="username"
             >
             <small style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: block;">
-              Use your chosen username or assigned Employee ID
+              Enter the username you registered with or your official Employee ID
             </small>
           </div>
 
@@ -127,11 +137,13 @@
               type="password"
               id="loginPassword"
               class="form-input"
-              placeholder="e.g. password123"
-              value="password123"
+              placeholder="Enter password (e.g. password123)"
               required
               autocomplete="current-password"
             >
+            <small style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: block;">
+              (Default fallback password: <code>password123</code>)
+            </small>
           </div>
 
           <!-- 1-Click Demo Profiles -->
@@ -140,10 +152,11 @@
               Quick Demo Accounts (Select to test):
             </label>
             <select id="demoSelect" class="form-select" onchange="applyDemoWorker(this.value)">
-              <option value="ramu|password123">WRK-C101: Ramu Selvam (Mason - Construction) - user: ramu</option>
-              <option value="muthu|password123">WRK-C102: Muthu Kumar (Plumber - Construction) - user: muthu</option>
-              <option value="priya|password123">WRK-H201: Priya Manoharan (Sanitation - Hospital) - user: priya</option>
-              <option value="anitha|password123">WRK-H203: Anitha Ravi (Nurse - Hospital) - user: anitha</option>
+              <option value="">-- Choose Demo Account --</option>
+              <option value="ramu|password123">WRK-C101: Ramu Selvam (Mason - Construction)</option>
+              <option value="muthu|password123">WRK-C102: Muthu Kumar (Plumber - Construction)</option>
+              <option value="priya|password123">WRK-H201: Priya Manoharan (Sanitation - Hospital)</option>
+              <option value="anitha|password123">WRK-H203: Anitha Ravi (Nurse - Hospital)</option>
             </select>
           </div>
 
@@ -365,8 +378,12 @@
 
     async function handleWorkerLogin(e) {
       e.preventDefault();
+      const errorAlert = document.getElementById('loginErrorAlert');
+      const errorText = document.getElementById('loginErrorText');
+      errorAlert.style.display = 'none';
+
       const identifier = document.getElementById('loginIdentifier').value.trim();
-      const password = document.getElementById('loginPassword').value;
+      const password = document.getElementById('loginPassword').value.trim();
 
       try {
         const res = await fetch(WorkRightConfig.url('/api/auth/worker/login'), {
@@ -389,7 +406,9 @@
         showDashboard(worker);
         showToast(`Welcome back, ${worker.name}!`);
       } catch (err) {
-        alert(err.message);
+        errorText.textContent = err.message;
+        errorAlert.style.display = 'flex';
+        errorAlert.scrollIntoView({ behavior: 'smooth' });
       }
     }
 
@@ -397,7 +416,7 @@
       e.preventDefault();
       const name = document.getElementById('regName').value.trim();
       const username = document.getElementById('regUsername').value.trim();
-      const password = document.getElementById('regPassword').value;
+      const password = document.getElementById('regPassword').value.trim();
       const sector = document.getElementById('regSector').value;
       const role = document.getElementById('regRole').value;
 
@@ -422,12 +441,20 @@
           throw new Error(data.error || 'Registration failed');
         }
 
-        const notice = document.getElementById('registrationNotice');
-        notice.style.display = 'block';
-        notice.scrollIntoView({ behavior: 'smooth' });
         document.getElementById('workerRegisterForm').reset();
+
+        // Switch to login tab and prefill username
+        switchAuthTab('login');
+        document.getElementById('loginIdentifier').value = username;
+        document.getElementById('loginPassword').value = password;
+
+        const infoAlert = document.getElementById('loginInfoAlert');
+        const infoText = document.getElementById('loginInfoText');
+        infoText.innerHTML = `<strong>✅ Account Request Submitted!</strong><br>Username: <code>${username}</code><br>Your account has been submitted to the Employer Admin. Once approved, you can log in immediately.`;
+        infoAlert.style.display = 'block';
+        infoAlert.scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
-        alert(err.message);
+        alert('Registration Error: ' + err.message);
       }
     }
 

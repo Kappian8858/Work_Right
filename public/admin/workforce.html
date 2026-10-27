@@ -180,6 +180,7 @@
                 <tr>
                   <th scope="col">Employee ID</th>
                   <th scope="col">Username</th>
+                  <th scope="col">Password</th>
                   <th scope="col">Name</th>
                   <th scope="col">Trade / Role</th>
                   <th scope="col">Total Weeks</th>
@@ -189,7 +190,7 @@
               </thead>
               <tbody id="workforceTableBody">
                 <tr>
-                  <td colspan="7" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                  <td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
                     Loading workforce directory...
                   </td>
                 </tr>
@@ -398,21 +399,33 @@
           <tr>
             <td><strong style="color: #1d4ed8;">${w.id}</strong></td>
             <td><code>${w.username || w.id.toLowerCase()}</code></td>
+            <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${escapeHtml(w.password || 'password123')}</code></td>
             <td><strong>${escapeHtml(w.name)}</strong></td>
             <td>${escapeHtml(w.role)}</td>
             <td><strong>${w.totalWeeksWorked || 0} Weeks</strong></td>
             <td>${skillsBadges || '<span style="color: var(--admin-text-muted)">General</span>'}</td>
             <td>
-              <a
-                href="/passport/${w.id}"
-                target="_blank"
-                class="btn-action btn-action-primary"
-                style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-size: 12px;"
-                title="Open public verifiable skill passport"
-              >
-                <span>🪪 Passport</span>
-                <span aria-hidden="true">↗</span>
-              </a>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <a
+                  href="/passport/${w.id}"
+                  target="_blank"
+                  class="btn-action btn-action-primary"
+                  style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 4px 8px;"
+                  title="Open public verifiable skill passport"
+                >
+                  <span>🪪 View</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+                <button
+                  type="button"
+                  class="btn-action"
+                  style="font-size: 11px; padding: 4px 8px;"
+                  onclick="adminResetPassword('${w.id}', '${escapeHtml(w.name)}')"
+                  title="Reset password to password123"
+                >
+                  🔑 Reset Pwd
+                </button>
+              </div>
             </td>
           </tr>
         `;
@@ -513,6 +526,28 @@
         });
         if (!res.ok) throw new Error('Rejection failed');
         loadPendingRequests();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function adminResetPassword(workerId, workerName) {
+      const newPwd = prompt(`Reset login password for ${workerName} (${workerId}):`, 'password123');
+      if (!newPwd) return;
+
+      try {
+        const res = await fetch(WorkRightConfig.url(`/api/admin/workers/${encodeURIComponent(workerId)}/reset-password`), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Token': adminToken
+          },
+          body: JSON.stringify({ password: newPwd.trim() })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Password reset failed');
+        alert(`✅ ${data.message}\nWorker can now log in using password: ${newPwd.trim()}`);
+        loadWorkforce();
       } catch (err) {
         alert('Error: ' + err.message);
       }
