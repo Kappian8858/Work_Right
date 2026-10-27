@@ -547,6 +547,10 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Approval failed');
 
+        if (data.worker) {
+          saveWorkerLocally(data.worker);
+        }
+
         alert(`✅ Worker Approved!\nAssigned Employee ID: ${data.worker.id}\nThe worker can now log in using either their username ("${data.worker.username}") or Employee ID ("${data.worker.id}").`);
         loadPendingRequests();
         loadWorkforce();
@@ -654,6 +658,10 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to create worker');
 
+        if (data.worker) {
+          saveWorkerLocally(data.worker);
+        }
+
         alert(`✅ Employee Onboarded Successfully!\n\nName: ${data.worker.name}\nEmployee ID: ${data.worker.id}\nUsername: ${data.worker.username}\nSector: ${data.worker.sector.toUpperCase()}\n\nWorker can now log in immediately with either Username or Employee ID!`);
         closeCreateWorkerModal();
         document.getElementById('createWorkerForm').reset();
@@ -661,6 +669,17 @@
       } catch (err) {
         alert('Error: ' + err.message);
       }
+    }
+
+    function saveWorkerLocally(w) {
+      if (!w) return;
+      try {
+        let list = JSON.parse(localStorage.getItem('workright_cached_workers') || '[]');
+        list = list.filter(item => item.id !== w.id && item.username !== w.username);
+        list.unshift(w);
+        localStorage.setItem('workright_cached_workers', JSON.stringify(list));
+        localStorage.setItem('workright_last_approved_worker', JSON.stringify(w));
+      } catch (e) {}
     }
 
     // Passport Verification Requests Queue

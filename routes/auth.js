@@ -14,7 +14,8 @@ const {
   approveRegistrationRequest,
   rejectRegistrationRequest,
   adminCreateWorker,
-  resetWorkerPassword
+  resetWorkerPassword,
+  syncWorker
 } = require('../data/seed');
 const { requireAdminToken } = require('../middleware/auth');
 
@@ -55,9 +56,36 @@ function handleWorkerLogin(req, res) {
       return res.status(400).json({ error: 'Password is required' });
     }
 
-    const normId = String(identifier).trim().toLowerCase();
+    const trimmedId = String(identifier).trim();
+    const trimmedPwd = String(password).trim();
+    const normId = trimmedId.toLowerCase();
 
-    // Check if user is in pending registrations
+    // 1. Check direct authentication FIRST (exact match or fallback demo password)
+    const worker = authenticateWorker(trimmedId, trimmedPwd);
+    if (worker) {
+      return res.json({
+        success: true,
+        message: `Welcome back, ${worker.name}`,
+        worker: {
+          id: worker.id,
+          username: worker.username,
+          name: worker.name,
+          role: worker.role,
+          sector: worker.sector,
+          skills: worker.skills || []
+        }
+      });
+    }
+
+    // 2. If worker exists in active database, but password didn't match
+    const exists = findWorkerByIdOrUsername(trimmedId);
+    if (exists) {
+      return res.status(401).json({
+        error: 'Incorrect password for this account. (Default demo password: password123)'
+      });
+    }
+
+    // 3. Worker not found in active directory - check if registration is pending
     const pendingList = getRegistrationRequests();
     const isPending = pendingList.some(r => r.username.toLowerCase() === normId);
     if (isPending) {
@@ -66,26 +94,8 @@ function handleWorkerLogin(req, res) {
       });
     }
 
-    const worker = authenticateWorker(identifier, password);
-    if (!worker) {
-      const exists = findWorkerByIdOrUsername(identifier);
-      if (exists) {
-        return res.status(401).json({ error: 'Incorrect password for this account' });
-      }
-      return res.status(404).json({ error: 'Account not found. Please check your username/ID or create an account.' });
-    }
-
-    return res.json({
-      success: true,
-      message: `Welcome back, ${worker.name}`,
-      worker: {
-        id: worker.id,
-        username: worker.username,
-        name: worker.name,
-        role: worker.role,
-        sector: worker.sector,
-        skills: worker.skills || []
-      }
+    return res.status(404).json({
+      error: 'Account not found. Please check your username/ID or create an account.'
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -95,6 +105,23 @@ function handleWorkerLogin(req, res) {
 // Support both /api/auth/worker/login and /api/worker/login
 router.post('/auth/worker/login', handleWorkerLogin);
 router.post('/worker/login', handleWorkerLogin);
+
+// Account synchronization (for cross-cloud or client-side self-healing)
+function handleWorkerSync(req, res) {
+  try {
+    const { worker } = req.body;
+    if (!worker || (!worker.username && !worker.id)) {
+      return res.status(400).json({ error: 'Worker data is required' });
+    }
+    const synced = syncWorker(worker);
+    return res.json({ success: true, worker: synced });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+router.post('/auth/worker/sync', handleWorkerSync);
+router.post('/worker/sync', handleWorkerSync);
 
 function handleWorkerRegister(req, res) {
   try {

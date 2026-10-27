@@ -115,6 +115,19 @@
           <span id="loginInfoText">Notice text</span>
         </div>
 
+        <!-- Recent Registered / Approved Account Quick Access -->
+        <div id="recentAccountChip" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #1e40af;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <div>
+              <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #2563eb; display: block;">💡 Saved Account Ready</span>
+              <span id="recentAccountLabel">Username: murugan</span>
+            </div>
+            <button type="button" onclick="fillRecentAccount()" style="background: #2563eb; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+              Fill Credentials
+            </button>
+          </div>
+        </div>
+
         <form id="workerLoginForm" onsubmit="handleWorkerLogin(event)">
           <div class="form-group">
             <label for="loginIdentifier" class="form-label">Username or Employee ID</label>
@@ -346,7 +359,75 @@
         showDashboard({ id: workerId, name: workerName, sector: sector, username: username });
       } else {
         showAuth();
+        checkRecentAccountHint();
       }
+    }
+
+    function checkRecentAccountHint() {
+      try {
+        const lastApproved = JSON.parse(localStorage.getItem('workright_last_approved_worker') || 'null');
+        const lastReg = JSON.parse(localStorage.getItem('workright_last_registered_account') || 'null');
+        const chip = document.getElementById('recentAccountChip');
+        const label = document.getElementById('recentAccountLabel');
+
+        if (lastApproved) {
+          label.innerHTML = `<strong>${escapeHtml(lastApproved.name)}</strong> (ID: <code>${lastApproved.id}</code> | User: <code>${lastApproved.username}</code>)`;
+          chip.style.display = 'block';
+        } else if (lastReg) {
+          label.innerHTML = `<strong>${escapeHtml(lastReg.name)}</strong> (Requested Username: <code>${lastReg.username}</code>)`;
+          chip.style.display = 'block';
+        } else {
+          chip.style.display = 'none';
+        }
+      } catch (e) {}
+    }
+
+    function fillRecentAccount() {
+      try {
+        const lastApproved = JSON.parse(localStorage.getItem('workright_last_approved_worker') || 'null');
+        const lastReg = JSON.parse(localStorage.getItem('workright_last_registered_account') || 'null');
+        const acc = lastApproved || lastReg;
+        if (!acc) return;
+
+        // Prefill Employee ID or Username
+        document.getElementById('loginIdentifier').value = acc.id || acc.username;
+        document.getElementById('loginPassword').value = acc.password || 'password123';
+        showToast('Credentials filled! Click "Sign In to Portal".');
+      } catch (e) {}
+    }
+
+    function findInClientWorkerCache(identifier) {
+      if (!identifier) return null;
+      const q = String(identifier).trim().toLowerCase();
+
+      try {
+        const last = JSON.parse(localStorage.getItem('workright_last_approved_worker') || 'null');
+        if (last && ((last.id && last.id.toLowerCase() === q) || (last.username && last.username.toLowerCase() === q))) {
+          return last;
+        }
+      } catch (e) {}
+
+      try {
+        const list = JSON.parse(localStorage.getItem('workright_cached_workers') || '[]');
+        const found = list.find(w => (w.id && w.id.toLowerCase() === q) || (w.username && w.username.toLowerCase() === q));
+        if (found) return found;
+      } catch (e) {}
+
+      try {
+        const reg = JSON.parse(localStorage.getItem('workright_last_registered_account') || 'null');
+        if (reg && reg.username && reg.username.toLowerCase() === q) {
+          return reg;
+        }
+      } catch (e) {}
+
+      return null;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
     }
 
     function showDashboard(worker) {
@@ -386,13 +467,41 @@
       const password = document.getElementById('loginPassword').value.trim();
 
       try {
-        const res = await fetch(WorkRightConfig.url('/api/auth/worker/login'), {
+        let res = await fetch(WorkRightConfig.url('/api/auth/worker/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier, password })
         });
 
-        const data = await res.json();
+        let data = await res.json();
+
+        // Self-Healing Auto-Sync Fallback:
+        // If 404 account not found (e.g. fresh serverless container or server reboot),
+        // check if worker exists in client cache and sync to server.
+        if (res.status === 404 || (!res.ok && data.error && data.error.toLowerCase().includes('not found'))) {
+          const cached = findInClientWorkerCache(identifier);
+          if (cached) {
+            try {
+              const syncRes = await fetch(WorkRightConfig.url('/api/auth/worker/sync'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ worker: cached })
+              });
+              if (syncRes.ok) {
+                // Retry login now that worker is restored
+                res = await fetch(WorkRightConfig.url('/api/auth/worker/login'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ identifier, password: password || cached.password || 'password123' })
+                });
+                data = await res.json();
+              }
+            } catch (syncErr) {
+              console.warn('Sync attempt failed', syncErr);
+            }
+          }
+        }
+
         if (!res.ok) {
           throw new Error(data.error || 'Authentication failed');
         }
@@ -402,6 +511,15 @@
         localStorage.setItem('workright_worker_name', worker.name);
         localStorage.setItem('workright_worker_sector', worker.sector);
         localStorage.setItem('workright_worker_username', worker.username || worker.id.toLowerCase());
+
+        // Cache approved worker details locally
+        try {
+          let cached = JSON.parse(localStorage.getItem('workright_cached_workers') || '[]');
+          cached = cached.filter(w => w.id !== worker.id && w.username !== worker.username);
+          cached.unshift({ ...worker, password });
+          localStorage.setItem('workright_cached_workers', JSON.stringify(cached));
+          localStorage.setItem('workright_last_approved_worker', JSON.stringify({ ...worker, password }));
+        } catch (e) {}
 
         showDashboard(worker);
         showToast(`Welcome back, ${worker.name}!`);
@@ -441,6 +559,20 @@
           throw new Error(data.error || 'Registration failed');
         }
 
+        // Cache registration details locally
+        try {
+          const regRecord = {
+            name,
+            username: username.toLowerCase(),
+            password,
+            sector,
+            role,
+            skills: checkedSkills,
+            status: 'pending'
+          };
+          localStorage.setItem('workright_last_registered_account', JSON.stringify(regRecord));
+        } catch (e) {}
+
         document.getElementById('workerRegisterForm').reset();
 
         // Switch to login tab and prefill username
@@ -448,9 +580,11 @@
         document.getElementById('loginIdentifier').value = username;
         document.getElementById('loginPassword').value = password;
 
+        checkRecentAccountHint();
+
         const infoAlert = document.getElementById('loginInfoAlert');
         const infoText = document.getElementById('loginInfoText');
-        infoText.innerHTML = `<strong>✅ Account Request Submitted!</strong><br>Username: <code>${username}</code><br>Your account has been submitted to the Employer Admin. Once approved, you can log in immediately.`;
+        infoText.innerHTML = `<strong>✅ Account Request Submitted!</strong><br>Username: <code>${username}</code><br>Your account has been submitted to the Employer Admin. Once approved by admin, you can log in immediately.`;
         infoAlert.style.display = 'block';
         infoAlert.scrollIntoView({ behavior: 'smooth' });
       } catch (err) {

@@ -5,6 +5,9 @@
  * and Username/Password authentication.
  */
 
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { calculateExpectedPay, checkViolation } = require('../logic/payCalculator');
 const { translateHazardDescription } = require('../logic/translator');
 
@@ -442,6 +445,19 @@ const initialPassportRequests = [
   }
 ];
 
+// Storage File Paths (Local data directory or serverless /tmp fallback)
+const STORE_FILE = path.join(__dirname, 'store.json');
+const TMP_STORE_FILE = path.join(os.tmpdir(), 'workright_store.json');
+
+function getStoreFilePath() {
+  try {
+    fs.accessSync(__dirname, fs.constants.W_OK);
+    return STORE_FILE;
+  } catch (e) {
+    return TMP_STORE_FILE;
+  }
+}
+
 // Active in-memory state
 let workers = JSON.parse(JSON.stringify(initialWorkers));
 let registrationRequests = JSON.parse(JSON.stringify(initialRegistrationRequests));
@@ -449,12 +465,57 @@ let payRecords = JSON.parse(JSON.stringify(initialPayRecords));
 let hazards = JSON.parse(JSON.stringify(initialHazards));
 let passportRequests = JSON.parse(JSON.stringify(initialPassportRequests));
 
+function persistStore() {
+  try {
+    const target = getStoreFilePath();
+    const data = {
+      workers,
+      registrationRequests,
+      payRecords,
+      hazards,
+      passportRequests
+    };
+    fs.writeFileSync(target, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    // Non-fatal, continue with in-memory state
+  }
+}
+
+function loadPersistedStore() {
+  const candidates = [STORE_FILE, TMP_STORE_FILE];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        const raw = fs.readFileSync(p, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.workers) && parsed.workers.length > 0) {
+          workers = parsed.workers;
+          if (Array.isArray(parsed.registrationRequests)) registrationRequests = parsed.registrationRequests;
+          if (Array.isArray(parsed.payRecords)) payRecords = parsed.payRecords;
+          if (Array.isArray(parsed.hazards)) hazards = parsed.hazards;
+          if (Array.isArray(parsed.passportRequests)) passportRequests = parsed.passportRequests;
+          return true;
+        }
+      }
+    } catch (e) {}
+  }
+  return false;
+}
+
+// Attempt to restore any previously persisted accounts/data
+loadPersistedStore();
+
 function resetStore() {
   workers = JSON.parse(JSON.stringify(initialWorkers));
   registrationRequests = JSON.parse(JSON.stringify(initialRegistrationRequests));
   payRecords = JSON.parse(JSON.stringify(initialPayRecords));
   hazards = JSON.parse(JSON.stringify(initialHazards));
   passportRequests = JSON.parse(JSON.stringify(initialPassportRequests));
+
+  try {
+    if (fs.existsSync(STORE_FILE)) fs.unlinkSync(STORE_FILE);
+    if (fs.existsSync(TMP_STORE_FILE)) fs.unlinkSync(TMP_STORE_FILE);
+  } catch (e) {}
 }
 
 // Generate unique Employee ID based on sector
@@ -507,6 +568,7 @@ function updateWorkerSkills(workerId, skills) {
   if (Array.isArray(skills)) {
     worker.skills = [...new Set(skills)];
   }
+  persistStore();
   return worker;
 }
 
@@ -514,6 +576,7 @@ function updateWorkerExperience(workerId, experience) {
   const worker = getWorkerById(workerId) || findWorkerByIdOrUsername(workerId);
   if (!worker) return null;
   worker.experience = String(experience || '').trim();
+  persistStore();
   return worker;
 }
 
@@ -531,8 +594,14 @@ function authenticateWorker(identifier, password) {
     return worker;
   }
 
+  // 1b. Case-insensitive match with registered password
+  if (workerPwd && workerPwd.toLowerCase() === inputPwd.toLowerCase()) {
+    return worker;
+  }
+
   // 2. Demo fallback options ('password123' or 'admin')
-  if (inputPwd === 'password123' || inputPwd === 'admin') {
+  const lowerInput = inputPwd.toLowerCase();
+  if (lowerInput === 'password123' || lowerInput === 'admin') {
     return worker;
   }
 
@@ -547,8 +616,59 @@ function authenticateWorker(identifier, password) {
 function resetWorkerPassword(identifier, newPassword = 'password123') {
   const worker = findWorkerByIdOrUsername(identifier);
   if (!worker) return null;
-  worker.password = newPassword;
+  worker.password = String(newPassword).trim();
+  persistStore();
   return worker;
+}
+
+// Worker Synchronization (e.g. from client cache or cross-cloud sync)
+function syncWorker(workerData) {
+  if (!workerData) return null;
+  const username = String(workerData.username || '').trim().toLowerCase();
+  const id = workerData.id ? String(workerData.id).trim().toUpperCase() : null;
+
+  let existing = null;
+  if (id) existing = workers.find(w => w.id && w.id.toUpperCase() === id);
+  if (!existing && username) existing = workers.find(w => w.username && w.username.toLowerCase() === username);
+
+  if (existing) {
+    if (workerData.password) existing.password = String(workerData.password).trim();
+    if (workerData.name) existing.name = workerData.name;
+    if (workerData.role) existing.role = workerData.role;
+    if (workerData.sector) existing.sector = workerData.sector;
+    if (workerData.skills && Array.isArray(workerData.skills)) existing.skills = workerData.skills;
+    if (workerData.experience) existing.experience = workerData.experience;
+    persistStore();
+    return existing;
+  }
+
+  const newId = id || generateEmployeeId(workerData.sector);
+  const newWorker = {
+    id: newId,
+    username: username || newId.toLowerCase(),
+    password: String(workerData.password || 'password123').trim(),
+    name: String(workerData.name || 'Worker').trim(),
+    role: String(workerData.role || 'Labourer').trim(),
+    sector: workerData.sector ? String(workerData.sector).toLowerCase() : 'construction',
+    experience: String(workerData.experience || '').trim(),
+    skills: Array.isArray(workerData.skills) && workerData.skills.length > 0 ? workerData.skills : ['Safety Protocols'],
+    joinedDate: workerData.joinedDate || new Date().toISOString().split('T')[0],
+    status: 'active'
+  };
+
+  workers.push(newWorker);
+
+  // If there was any pending registration request with this username, mark it approved
+  if (username) {
+    const req = registrationRequests.find(r => r.username.toLowerCase() === username && r.status === 'pending');
+    if (req) {
+      req.status = 'approved';
+      req.approvedAt = new Date().toISOString();
+    }
+  }
+
+  persistStore();
+  return newWorker;
 }
 
 // Registration Requests (Self-Registration by Worker)
@@ -573,7 +693,7 @@ function addRegistrationRequest({ name, username, password, sector, role, skills
     id: reqId,
     name: String(name || '').trim(),
     username: uname,
-    password: String(password || 'password123'),
+    password: String(password || 'password123').trim(),
     sector: sector ? String(sector).toLowerCase() : 'construction',
     role: String(role || 'Labourer').trim(),
     skills: Array.isArray(skills) ? skills : ['Safety Protocols'],
@@ -582,6 +702,7 @@ function addRegistrationRequest({ name, username, password, sector, role, skills
   };
 
   registrationRequests.unshift(request);
+  persistStore();
   return request;
 }
 
@@ -596,7 +717,7 @@ function approveRegistrationRequest(requestId) {
   const newWorker = {
     id: newId,
     username: req.username,
-    password: req.password,
+    password: String(req.password || 'password123').trim(),
     name: req.name,
     role: req.role,
     sector: req.sector,
@@ -606,6 +727,7 @@ function approveRegistrationRequest(requestId) {
   };
 
   workers.push(newWorker);
+  persistStore();
   return newWorker;
 }
 
@@ -615,6 +737,7 @@ function rejectRegistrationRequest(requestId, reason) {
   req.status = 'rejected';
   req.rejectedReason = reason || 'Declined by Administrator';
   req.rejectedAt = new Date().toISOString();
+  persistStore();
   return req;
 }
 
@@ -636,7 +759,7 @@ function adminCreateWorker({ name, username, password, sector, role, skills }) {
   const newWorker = {
     id: newId,
     username: uname,
-    password: password || 'password123',
+    password: String(password || 'password123').trim(),
     name: String(name).trim(),
     role: role || (sec === 'hospital' ? 'Sanitation Staff' : 'Labourer'),
     sector: sec,
@@ -646,6 +769,17 @@ function adminCreateWorker({ name, username, password, sector, role, skills }) {
   };
 
   workers.push(newWorker);
+
+  // If there was any pending registration request with this username, mark it approved
+  if (username) {
+    const req = registrationRequests.find(r => r.username.toLowerCase() === username && r.status === 'pending');
+    if (req) {
+      req.status = 'approved';
+      req.approvedAt = new Date().toISOString();
+    }
+  }
+
+  persistStore();
   return newWorker;
 }
 
@@ -968,5 +1102,8 @@ module.exports = {
   grantPassportRequest,
   rejectPassportRequest,
   getWorkerPassportData,
-  resetWorkerPassword
+  resetWorkerPassword,
+  syncWorker,
+  persistStore,
+  loadPersistedStore
 };

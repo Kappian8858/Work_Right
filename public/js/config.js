@@ -5,9 +5,8 @@
  */
 
 const WorkRightConfig = {
-  // If you want all Vercel requests to forward to your Render backend,
-  // put your Render URL here (e.g. 'https://your-app.onrender.com'):
-  DEFAULT_BACKEND_URL: '',
+  // Production Render Backend URL
+  DEFAULT_BACKEND_URL: 'https://prompt-wars-vsi5.onrender.com',
 
   // Returns base URL for all API calls
   getApiBase() {
@@ -17,15 +16,21 @@ const WorkRightConfig = {
       return custom.replace(/\/$/, '');
     }
 
-    // 2. Global window or config default override
+    // 2. Global window override
     if (window.WORKRIGHT_BACKEND_URL) {
       return window.WORKRIGHT_BACKEND_URL.replace(/\/$/, '');
     }
+
+    // 3. If running directly on Render backend, use same origin
+    if (typeof window !== 'undefined' && window.location && window.location.hostname.includes('onrender.com')) {
+      return '';
+    }
+
+    // 4. Multi-cloud default (Connects Vercel frontend to Render backend)
     if (this.DEFAULT_BACKEND_URL) {
       return this.DEFAULT_BACKEND_URL.replace(/\/$/, '');
     }
 
-    // 3. Same origin by default (Works natively on Vercel, Render, and Localhost)
     return '';
   },
 
