@@ -133,6 +133,7 @@
     </div>
   </main>
 
+  <script src="/js/config.js"></script>
   <script>
     let currentSector = localStorage.getItem('workright_admin_sector') || 'construction';
     let adminToken = localStorage.getItem('workright_admin_token') || 'admin123';
@@ -174,7 +175,7 @@
     async function loadHazards() {
       const tbody = document.getElementById('hazardsTableBody');
       try {
-        const res = await fetch(`/api/hazards?sector=${encodeURIComponent(currentSector)}`, {
+        const res = await fetch(WorkRightConfig.url(`/api/hazards?sector=${encodeURIComponent(currentSector)}`), {
           headers: {
             'X-Admin-Token': adminToken
           }
@@ -278,7 +279,7 @@
 
     async function updateStatus(ticketId, newStatus) {
       try {
-        const res = await fetch(`/api/hazards/${encodeURIComponent(ticketId)}`, {
+        const res = await fetch(WorkRightConfig.url(`/api/hazards/${encodeURIComponent(ticketId)}`), {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

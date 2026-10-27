@@ -159,6 +159,7 @@
   </nav>
 
   <!-- Scripts -->
+  <script src="/js/config.js"></script>
   <script src="/js/i18n.js"></script>
   <script src="/js/speech.js"></script>
   <script>
@@ -188,7 +189,7 @@
       const sector = localStorage.getItem('workright_worker_sector') || 'construction';
 
       try {
-        const res = await fetch('/api/pay/check', {
+        const res = await fetch(WorkRightConfig.url('/api/pay/check'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ workerId, hours, actualPay, sector })
@@ -291,7 +292,7 @@
       const actualPay = currentCalculation.actualPay;
 
       try {
-        const res = await fetch('/api/pay/log', {
+        const res = await fetch(WorkRightConfig.url('/api/pay/log'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ workerId, hours, actualPay })

@@ -296,6 +296,7 @@
     </div>
   </div>
 
+  <script src="/js/config.js"></script>
   <script>
     let currentSector = localStorage.getItem('workright_admin_sector') || 'construction';
     let adminToken = localStorage.getItem('workright_admin_token') || 'admin123';
@@ -348,7 +349,7 @@
 
     async function loadSectorsConfig() {
       try {
-        const res = await fetch('/api/sectors');
+        const res = await fetch(WorkRightConfig.url('/api/sectors'));
         sectorsConfig = await res.json();
       } catch (err) {
         console.warn('Could not load sectors config', err);
@@ -358,7 +359,7 @@
     async function loadWorkforce() {
       const tbody = document.getElementById('workforceTableBody');
       try {
-        const res = await fetch(`/api/admin/workforce?sector=${encodeURIComponent(currentSector)}`, {
+        const res = await fetch(WorkRightConfig.url(`/api/admin/workforce?sector=${encodeURIComponent(currentSector)}`), {
           headers: { 'X-Admin-Token': adminToken }
         });
 
@@ -439,7 +440,7 @@
     async function loadPendingRequests() {
       const tbody = document.getElementById('pendingTableBody');
       try {
-        const res = await fetch('/api/admin/registration-requests', {
+        const res = await fetch(WorkRightConfig.url('/api/admin/registration-requests'), {
           headers: { 'X-Admin-Token': adminToken }
         });
         if (!res.ok) throw new Error('Failed to load pending requests');
@@ -481,7 +482,7 @@
     async function approveRequest(requestId) {
       if (!confirm('Approve this worker account and generate their official Employee ID?')) return;
       try {
-        const res = await fetch(`/api/admin/registration-requests/${requestId}/approve`, {
+        const res = await fetch(WorkRightConfig.url(`/api/admin/registration-requests/${requestId}/approve`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -502,7 +503,7 @@
     async function rejectRequest(requestId) {
       const reason = prompt('Optional reason for declining:');
       try {
-        const res = await fetch(`/api/admin/registration-requests/${requestId}/reject`, {
+        const res = await fetch(WorkRightConfig.url(`/api/admin/registration-requests/${requestId}/reject`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -557,7 +558,7 @@
       const checkedSkills = Array.from(document.querySelectorAll('input[name="modalSkills"]:checked')).map(cb => cb.value);
 
       try {
-        const res = await fetch('/api/admin/workers', {
+        const res = await fetch(WorkRightConfig.url('/api/admin/workers'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

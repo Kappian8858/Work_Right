@@ -23,12 +23,14 @@ const I18N = {
     }
 
     try {
-      const res = await fetch(`/api/translations/${lang}`);
+      const apiUrl = typeof WorkRightConfig !== 'undefined' ? WorkRightConfig.url(`/api/translations/${lang}`) : `/api/translations/${lang}`;
+      const res = await fetch(apiUrl);
       if (res.ok) {
         this.translations[lang] = await res.json();
       } else {
         // Fallback to English
-        const fallback = await fetch('/api/translations/en');
+        const fallbackUrl = typeof WorkRightConfig !== 'undefined' ? WorkRightConfig.url('/api/translations/en') : '/api/translations/en';
+        const fallback = await fetch(fallbackUrl);
         this.translations[lang] = await fallback.json();
       }
     } catch (e) {

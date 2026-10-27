@@ -163,6 +163,7 @@
     </div>
   </div>
 
+  <script src="/js/config.js"></script>
   <script>
     let currentSector = localStorage.getItem('workright_admin_sector') || 'construction';
     let adminToken = localStorage.getItem('workright_admin_token') || 'admin123';
@@ -204,7 +205,7 @@
     async function loadPayRecords() {
       const tbody = document.getElementById('payTableBody');
       try {
-        const res = await fetch(`/api/pay?sector=${encodeURIComponent(currentSector)}`, {
+        const res = await fetch(WorkRightConfig.url(`/api/pay?sector=${encodeURIComponent(currentSector)}`), {
           headers: {
             'X-Admin-Token': adminToken
           }
@@ -316,7 +317,7 @@
       }
 
       try {
-        const res = await fetch(`/api/pay/respond/${encodeURIComponent(activeModalData.workerId)}`, {
+        const res = await fetch(WorkRightConfig.url(`/api/pay/respond/${encodeURIComponent(activeModalData.workerId)}`), {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

@@ -193,11 +193,38 @@ All 18+ tests covering pure logic, wage mathematics, hazard status transitions, 
 
 ---
 
-## ☁️ Google Cloud Run Deployment (Step-by-Step)
+## 🚀 Deployment Options
 
-WorkRight is designed for deployment to **Google Cloud Run** in the Mumbai (`asia-south1`) region.
+### Option 1 — Vercel (Frontend) + Render (Backend)
 
-### Step 1 — Authenticate with Google Cloud
+#### Step 1: Deploy Backend to Render
+1. Go to [dashboard.render.com](https://dashboard.render.com) and click **New + $\rightarrow$ Web Service**.
+2. Connect your GitHub repository (`Prompt-Wars`).
+3. Set the following settings:
+   - **Name:** `workright-backend`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+4. Under **Environment Variables**, add:
+   - `ADMIN_TOKEN`: `admin123`
+5. Click **Deploy Web Service**.
+6. Copy your Render URL (e.g., `https://workright-backend.onrender.com`).
+
+#### Step 2: Deploy Frontend to Vercel
+1. Go to [vercel.com](https://vercel.com) and click **Add New... $\rightarrow$ Project**.
+2. Import your GitHub repository (`Prompt-Wars`).
+3. Under **Environment Variables**, add:
+   - `WORKRIGHT_BACKEND_URL`: `https://workright-backend.onrender.com` (your Render URL from Step 1)
+4. Click **Deploy**.
+5. Once deployed, open your Vercel URL. If you ever need to change the backend URL, the top banner or browser localStorage (`workright_backend_url`) lets you connect to any backend instance instantly!
+
+---
+
+### Option 2 — Google Cloud Run (Hackathon Mandatory)
+
+> ⚠️ **Hackathon Note:** If submitting to the official Prompt Wars 2026 Innovator Dashboard, check whether Cloud Run URLs are strictly required by the evaluation platform. Follow these steps:
+
+#### Step 1 — Authenticate with Google Cloud
 ```bash
 gcloud auth login
 ```
