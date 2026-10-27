@@ -1,0 +1,36 @@
+{
+  "name": "workright",
+  "version": "1.0.0",
+  "description": "Voice-first worker pay verification, hazard reporting, and verifiable skill passport for shift workers, aligned with UN SDG 8",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [
+    "hackathon",
+    "un-sdg-8",
+    "worker-rights",
+    "minimum-wage",
+    "hazard-reporting",
+    "skill-passport",
+    "tamil-nadu",
+    "cloud-run"
+  ],
+  "author": "Prompt Wars 2026 Participant",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "verbose": true
+  }
+}

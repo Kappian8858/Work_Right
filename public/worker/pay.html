@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight - Pay Checker</title>
+  <link rel="stylesheet" href="/css/worker.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header" role="banner">
+    <a href="/worker/index.html" class="brand-wrapper" aria-label="WorkRight Home">
+      <span class="brand-logo" aria-hidden="true">🛡️</span>
+      <span class="brand-name">WorkRight</span>
+    </a>
+    <nav class="lang-toggle-group" aria-label="Language Selector">
+      <button class="lang-btn active" data-lang="en" aria-label="English">EN</button>
+      <button class="lang-btn" data-lang="ta" aria-label="தமிழ்">தமிழ்</button>
+      <button class="lang-btn" data-lang="hi" aria-label="हिंदी">हिंदी</button>
+    </nav>
+  </header>
+
+  <!-- Worker Status Bar -->
+  <aside id="workerBar" class="worker-identity-bar" aria-label="Current Worker">
+    <div class="worker-chip">
+      <span aria-hidden="true">👷</span>
+      <span id="barWorkerName">Worker</span>
+      <span id="barSector" style="font-size: 11px; padding: 2px 6px; background: #dbeafe; border-radius: 4px;"></span>
+    </div>
+    <a href="/worker/index.html" data-i18n="change_worker">Switch</a>
+  </aside>
+
+  <main class="container" role="main">
+    <div style="margin-bottom: 16px;">
+      <h1 class="page-title" data-i18n="pay_title">Pay Checker & Wage Transparency</h1>
+      <p class="page-subtitle" data-i18n="pay_subtitle">Verify your weekly earnings against statutory Tamil Nadu minimum wage rules</p>
+    </div>
+
+    <!-- Pay Calculation Form -->
+    <section class="card" aria-label="Pay Calculator Form">
+      <form id="payForm" onsubmit="calculatePay(event)">
+        <div class="form-group">
+          <label for="hoursInput" class="form-label" data-i18n="pay_hours_label">Hours worked this week</label>
+          <input
+            type="number"
+            id="hoursInput"
+            class="form-input"
+            min="1"
+            max="120"
+            step="0.5"
+            placeholder="e.g. 50"
+            required
+            aria-required="true"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="actualPayInput" class="form-label" data-i18n="pay_actual_label">Actual pay received this week (₹)</label>
+          <input
+            type="number"
+            id="actualPayInput"
+            class="form-input"
+            min="0"
+            step="1"
+            placeholder="e.g. 3800"
+            required
+            aria-required="true"
+          >
+        </div>
+
+        <button type="submit" id="checkWageBtn" class="btn-touch btn-primary" aria-label="Check My Wage">
+          <span aria-hidden="true">💰</span>
+          <span data-i18n="pay_calculate_button">Check My Wage</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- Results Section (Visible after calculation) -->
+    <section id="resultsSection" style="display: none;" aria-live="polite" aria-label="Pay Breakdown Results">
+      <!-- Violation or Fair Banner -->
+      <div id="statusBanner" class="banner" role="alert">
+        <span id="bannerIcon" style="font-size: 26px;" aria-hidden="true">⚠️</span>
+        <div id="bannerText" style="flex: 1;">Checking...</div>
+      </div>
+
+      <!-- Breakdown Table -->
+      <div class="card" style="padding: 14px;">
+        <h2 style="font-size: 16px; margin-bottom: 12px; font-weight: 700;">Statutory Breakdown</h2>
+        <div class="breakdown-list">
+          <div class="breakdown-row">
+            <span data-i18n="pay_regular_hours">Regular Hours</span>
+            <span id="resRegularHours" style="font-weight: 600;">0 hrs</span>
+          </div>
+          <div class="breakdown-row">
+            <span data-i18n="pay_overtime_hours">Overtime Hours</span>
+            <span id="resOvertimeHours" style="font-weight: 600;">0 hrs</span>
+          </div>
+          <div class="breakdown-row">
+            <span data-i18n="pay_hourly_rate">Statutory Hourly Rate</span>
+            <span id="resHourlyRate" style="font-weight: 600;">₹0.00</span>
+          </div>
+          <div class="breakdown-row">
+            <span data-i18n="pay_base_pay">Expected Base Pay</span>
+            <span id="resBasePay" style="font-weight: 600;">₹0.00</span>
+          </div>
+          <div class="breakdown-row">
+            <span data-i18n="pay_overtime_pay">Expected Overtime Pay (1.5x)</span>
+            <span id="resOvertimePay" style="font-weight: 600;">₹0.00</span>
+          </div>
+          <div class="breakdown-row highlight">
+            <span data-i18n="pay_expected_label">Total Statutory Expected Pay</span>
+            <span id="resTotalExpected" style="color: #1d4ed8;">₹0.00</span>
+          </div>
+          <div class="breakdown-row">
+            <span data-i18n="pay_actual_label">Actual Pay Received</span>
+            <span id="resActualPay" style="font-weight: 600;">₹0.00</span>
+          </div>
+          <div class="breakdown-row highlight" id="diffRow">
+            <span data-i18n="pay_difference_label">Difference</span>
+            <span id="resDifference" style="font-weight: 800;">₹0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Max 2 Secondary Actions: Read Aloud & Save Record -->
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+        <!-- Read Aloud (Web Speech API) -->
+        <button type="button" id="readAloudBtn" class="btn-touch btn-secondary" onclick="toggleReadAloud()" aria-label="Read Aloud Breakdown">
+          <span style="font-size: 24px;" aria-hidden="true">🔊</span>
+          <span id="readAloudText" data-i18n="pay_read_aloud">🔊 Read Aloud</span>
+        </button>
+
+        <!-- Save Record to Skill Passport -->
+        <button type="button" id="saveRecordBtn" class="btn-touch btn-success" onclick="saveRecord()" aria-label="Save Record to Passport">
+          <span style="font-size: 24px;" aria-hidden="true">📋</span>
+          <span data-i18n="pay_save_record">📋 Save Record to Passport</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="status"></div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav" aria-label="Bottom Navigation">
+    <a href="/worker/pay.html" class="nav-item active" aria-label="Pay Checker" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">💰</span>
+      <span data-i18n="nav_pay">Pay</span>
+    </a>
+    <a href="/worker/hazard.html" class="nav-item" aria-label="Hazard Reporter">
+      <span class="nav-icon" aria-hidden="true">🎙️</span>
+      <span data-i18n="nav_hazard">Hazard</span>
+    </a>
+    <a href="/worker/passport.html" class="nav-item" aria-label="Skill Passport">
+      <span class="nav-icon" aria-hidden="true">🪪</span>
+      <span data-i18n="nav_passport">Passport</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="/js/i18n.js"></script>
+  <script src="/js/speech.js"></script>
+  <script>
+    let currentCalculation = null;
+    let isSpeaking = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      I18N.init(() => {
+        loadWorkerContext();
+      });
+    });
+
+    function loadWorkerContext() {
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const sector = localStorage.getItem('workright_worker_sector') || 'construction';
+      const workerName = localStorage.getItem('workright_worker_name') || 'Ramu Selvam';
+
+      document.getElementById('barWorkerName').textContent = workerName;
+      document.getElementById('barSector').textContent = sector.toUpperCase();
+    }
+
+    async function calculatePay(e) {
+      e.preventDefault();
+      const hours = parseFloat(document.getElementById('hoursInput').value);
+      const actualPay = parseFloat(document.getElementById('actualPayInput').value);
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const sector = localStorage.getItem('workright_worker_sector') || 'construction';
+
+      try {
+        const res = await fetch('/api/pay/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workerId, hours, actualPay, sector })
+        });
+
+        if (!res.ok) throw new Error('Calculation failed');
+        currentCalculation = await res.json();
+        renderResults(currentCalculation);
+      } catch (err) {
+        showToast('Error calculating pay: ' + err.message);
+      }
+    }
+
+    function renderResults(data) {
+      const resultsSection = document.getElementById('resultsSection');
+      resultsSection.style.display = 'block';
+
+      // Update Breakdown values
+      document.getElementById('resRegularHours').textContent = `${data.regularHours} hrs`;
+      document.getElementById('resOvertimeHours').textContent = `${data.overtimeHours} hrs`;
+      document.getElementById('resHourlyRate').textContent = `₹${data.hourlyRate}`;
+      document.getElementById('resBasePay').textContent = `₹${data.basePay}`;
+      document.getElementById('resOvertimePay').textContent = `₹${data.overtimePay}`;
+      document.getElementById('resTotalExpected').textContent = `₹${data.totalExpected}`;
+      document.getElementById('resActualPay').textContent = `₹${data.actualPay}`;
+
+      const banner = document.getElementById('statusBanner');
+      const bannerIcon = document.getElementById('bannerIcon');
+      const bannerText = document.getElementById('bannerText');
+      const resDiff = document.getElementById('resDifference');
+
+      if (data.violation) {
+        banner.className = 'banner banner-violation';
+        bannerIcon.textContent = '⚠️';
+        bannerText.textContent = I18N.t('pay_violation_message', { amount: data.shortfall });
+        resDiff.textContent = `-₹${data.shortfall} (Shortfall)`;
+        resDiff.style.color = '#dc2626';
+      } else {
+        banner.className = 'banner banner-fair';
+        bannerIcon.textContent = '✅';
+        bannerText.textContent = I18N.t('pay_fair_message');
+        resDiff.textContent = data.difference <= 0 ? `+₹${Math.abs(data.difference)} (Fair)` : `₹0 (Fair)`;
+        resDiff.style.color = '#16a34a';
+      }
+
+      // Scroll smoothly to results
+      resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function toggleReadAloud() {
+      if (isSpeaking) {
+        VoiceAssistant.stopSpeaking();
+        isSpeaking = false;
+        document.getElementById('readAloudText').textContent = I18N.t('pay_read_aloud');
+        return;
+      }
+
+      if (!currentCalculation) return;
+
+      const lang = I18N.currentLang;
+      let textToRead = '';
+
+      if (lang === 'ta') {
+        textToRead = currentCalculation.violation
+          ? `கவனம். இந்த வாரம் நீங்கள் வேலை செய்த நேரம் ${currentCalculation.hoursWorked} மணிநேரம். சட்டப்படி உங்களுக்கு கிடைக்க வேண்டிய ஊதியம் ரூபாய் ${currentCalculation.totalExpected}. ஆனால் உங்களுக்கு வழங்கப்பட்டது ரூபாய் ${currentCalculation.actualPay}. உங்களுக்கு ரூபாய் ${currentCalculation.shortfall} குறைவாக வழங்கப்பட்டுள்ளது.`
+          : `உங்கள் ஊதியம் சரியாக உள்ளது. நீங்கள் வேலை செய்த நேரம் ${currentCalculation.hoursWorked} மணிநேரம். சட்டப்படி கிடைக்க வேண்டிய ஊதியம் ரூபாய் ${currentCalculation.totalExpected}. உங்களுக்கு வழங்கப்பட்டது ரூபாய் ${currentCalculation.actualPay}.`;
+      } else if (lang === 'hi') {
+        textToRead = currentCalculation.violation
+          ? `सावधान। इस सप्ताह काम किए गए कुल घंटे ${currentCalculation.hoursWorked} हैं। नियमों के अनुसार आपका अपेक्षित वेतन ₹${currentCalculation.totalExpected} है, लेकिन आपको ₹${currentCalculation.actualPay} मिले हैं। आपको ₹${currentCalculation.shortfall} कम मिले हैं।`
+          : `आपका वेतन सही है। आपने ${currentCalculation.hoursWorked} घंटे काम किया। अपेक्षित वेतन ₹${currentCalculation.totalExpected} और मिला वेतन ₹${currentCalculation.actualPay} है।`;
+      } else {
+        textToRead = currentCalculation.violation
+          ? `Attention. For ${currentCalculation.hoursWorked} hours worked, your statutory expected pay is ₹${currentCalculation.totalExpected}. You received ₹${currentCalculation.actualPay}. You may have been underpaid by ₹${currentCalculation.shortfall}.`
+          : `Your pay looks fair. For ${currentCalculation.hoursWorked} hours worked, expected pay is ₹${currentCalculation.totalExpected} and you received ₹${currentCalculation.actualPay}.`;
+      }
+
+      VoiceAssistant.speakText(
+        textToRead,
+        lang,
+        () => {
+          isSpeaking = true;
+          document.getElementById('readAloudText').textContent = I18N.t('pay_reading');
+        },
+        () => {
+          isSpeaking = false;
+          document.getElementById('readAloudText').textContent = I18N.t('pay_read_aloud');
+        },
+        (err) => {
+          isSpeaking = false;
+          document.getElementById('readAloudText').textContent = I18N.t('pay_read_aloud');
+          showToast('Voice error: ' + err.message);
+        }
+      );
+    }
+
+    async function saveRecord() {
+      if (!currentCalculation) return;
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const hours = currentCalculation.hoursWorked;
+      const actualPay = currentCalculation.actualPay;
+
+      try {
+        const res = await fetch('/api/pay/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workerId, hours, actualPay })
+        });
+
+        if (!res.ok) throw new Error('Failed to save record');
+        showToast(I18N.t('pay_record_saved'));
+      } catch (err) {
+        showToast('Error saving: ' + err.message);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+  </script>
+</body>
+</html>

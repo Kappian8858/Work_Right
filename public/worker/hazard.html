@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight - Hazard Reporter</title>
+  <link rel="stylesheet" href="/css/worker.css">
+  <style>
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      background: #ffffff;
+      margin-bottom: 18px;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 28px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #cbd5e1;
+      transition: .3s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #166534;
+    }
+    input:focus-visible + .slider {
+      outline: 3px solid #1d4ed8;
+      outline-offset: 2px;
+    }
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header" role="banner">
+    <a href="/worker/index.html" class="brand-wrapper" aria-label="WorkRight Home">
+      <span class="brand-logo" aria-hidden="true">🛡️</span>
+      <span class="brand-name">WorkRight</span>
+    </a>
+    <nav class="lang-toggle-group" aria-label="Language Selector">
+      <button class="lang-btn active" data-lang="en" aria-label="English">EN</button>
+      <button class="lang-btn" data-lang="ta" aria-label="தமிழ்">தமிழ்</button>
+      <button class="lang-btn" data-lang="hi" aria-label="हिंदी">हिंदी</button>
+    </nav>
+  </header>
+
+  <!-- Worker Status Bar -->
+  <aside id="workerBar" class="worker-identity-bar" aria-label="Worker Profile">
+    <div class="worker-chip">
+      <span aria-hidden="true">👷</span>
+      <span id="barWorkerName">Worker</span>
+      <span id="barSector" style="font-size: 11px; padding: 2px 6px; background: #dbeafe; border-radius: 4px;"></span>
+    </div>
+    <a href="/worker/index.html" data-i18n="change_worker">Switch</a>
+  </aside>
+
+  <main class="container" role="main">
+    <div style="margin-bottom: 16px;">
+      <h1 class="page-title" data-i18n="hazard_title">Safe & Voice-Driven Hazard Reporter</h1>
+      <p class="page-subtitle" data-i18n="hazard_subtitle">Speak in your language. Keep your workplace safe without fear.</p>
+    </div>
+
+    <!-- Hazard Submission Card -->
+    <section class="card" aria-label="Hazard Report Form">
+      <!-- One Large Microphone Button in Center -->
+      <div class="mic-container">
+        <button
+          type="button"
+          id="micBtn"
+          class="mic-button"
+          onclick="toggleVoiceRecording()"
+          aria-label="Tap to speak hazard description"
+          aria-pressed="false"
+        >
+          <span id="micIcon" aria-hidden="true">🎙️</span>
+        </button>
+        <div id="micStatus" class="mic-status-text" data-i18n="hazard_mic_button">
+          🎙️ Tap to Speak Hazard
+        </div>
+      </div>
+
+      <form id="hazardForm" onsubmit="submitHazard(event)">
+        <!-- Editable Transcribed Text Area -->
+        <div class="form-group">
+          <label for="descInput" class="form-label" data-i18n="hazard_desc_label">Hazard Description</label>
+          <textarea
+            id="descInput"
+            class="form-textarea"
+            rows="3"
+            placeholder="Tap mic above to speak or type description here..."
+            required
+            aria-required="true"
+            oninput="handleTextTyping(this.value)"
+          ></textarea>
+        </div>
+
+        <!-- Hazard Category Dropdown -->
+        <div class="form-group">
+          <label for="categorySelect" class="form-label" data-i18n="hazard_category_label">Hazard Category</label>
+          <select id="categorySelect" class="form-select" required aria-required="true">
+            <option value="Fire">Fire</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Chemical">Chemical</option>
+            <option value="Structural">Structural</option>
+            <option value="Fall">Fall</option>
+            <option value="Biological">Biological</option>
+            <option value="Machinery">Machinery</option>
+            <option value="Sanitation">Sanitation</option>
+          </select>
+          <small id="categoryHint" style="display: none; color: #15803d; font-weight: 700; margin-top: 4px;">
+            ✨ Auto-detected from speech keywords!
+          </small>
+        </div>
+
+        <!-- Anonymous Toggle (Default ON) -->
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight: 700; font-size: 15px;" data-i18n="hazard_anonymous_toggle">Report Anonymously</div>
+            <div style="font-size: 12px; color: var(--text-muted);" data-i18n="hazard_anonymous_hint">
+              Your name will never be shared with management.
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="anonToggle" checked aria-label="Toggle anonymous report">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Submit Button (Primary Action) -->
+        <button type="submit" id="submitHazardBtn" class="btn-touch btn-primary" aria-label="Submit Hazard Report">
+          <span aria-hidden="true">🚀</span>
+          <span data-i18n="hazard_submit">Submit Hazard Report</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- Submission Success Confirmation Box -->
+    <section id="submissionSuccess" class="card" style="display: none; border-color: #86efac; background: #f0fdf4;" aria-live="polite">
+      <h2 style="color: #166534; font-size: 18px; margin-bottom: 8px;" data-i18n="hazard_submitted_title">
+        Hazard Reported Successfully
+      </h2>
+      <p style="font-size: 14px; margin-bottom: 12px;">Save this ticket ID to track resolution status:</p>
+      <div style="background: white; border: 2px dashed #86efac; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 12px;">
+        <span style="font-size: 12px; color: var(--text-muted); display: block;" data-i18n="hazard_ticket_label">Your Ticket ID</span>
+        <strong id="createdTicketId" style="font-size: 22px; color: #1e3a8a; letter-spacing: 1px;">HAZ-2026-XXXX</strong>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span data-i18n="hazard_status_label">Current Status:</span>
+        <span class="badge-status badge-reported" data-i18n="hazard_status_reported">🔴 Reported</span>
+      </div>
+    </section>
+
+    <!-- Check Ticket Status Section -->
+    <section class="card" aria-label="Check Hazard Status">
+      <h2 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;" data-i18n="hazard_check_status_title">
+        Check Existing Hazard Status
+      </h2>
+      <form id="checkStatusForm" onsubmit="checkTicketStatus(event)" style="margin-top: 10px;">
+        <div class="form-group">
+          <label for="ticketInput" class="form-label" data-i18n="hazard_check_input_label">Enter Ticket ID</label>
+          <input
+            type="text"
+            id="ticketInput"
+            class="form-input"
+            placeholder="e.g. HAZ-2026-001"
+            required
+            aria-required="true"
+          >
+        </div>
+        <button type="submit" class="btn-touch btn-secondary" aria-label="Check Status">
+          <span aria-hidden="true">🔍</span>
+          <span data-i18n="hazard_check_button">Check Status</span>
+        </button>
+      </form>
+
+      <!-- Status Display Card -->
+      <div id="statusResultCard" style="display: none; margin-top: 16px; padding: 14px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <strong id="resTicketId" style="font-size: 15px;">HAZ-XXXX</strong>
+          <span id="resStatusBadge" class="badge-status">🔴 Reported</span>
+        </div>
+        <div style="font-size: 14px; margin-bottom: 6px;">
+          <strong>Category:</strong> <span id="resCategory">Chemical</span>
+        </div>
+        <div style="font-size: 14px; margin-bottom: 6px;">
+          <strong>Reported:</strong> <span id="resReportedBy">Anonymous</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <span id="resDescription">Description</span>
+        </div>
+        <div id="resNotesRow" style="font-size: 13px; color: #166534; margin-top: 8px; display: none;">
+          <strong>Supervisor Action:</strong> <span id="resNotes">Action taken</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="status"></div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav" aria-label="Bottom Navigation">
+    <a href="/worker/pay.html" class="nav-item" aria-label="Pay Checker">
+      <span class="nav-icon" aria-hidden="true">💰</span>
+      <span data-i18n="nav_pay">Pay</span>
+    </a>
+    <a href="/worker/hazard.html" class="nav-item active" aria-label="Hazard Reporter" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">🎙️</span>
+      <span data-i18n="nav_hazard">Hazard</span>
+    </a>
+    <a href="/worker/passport.html" class="nav-item" aria-label="Skill Passport">
+      <span class="nav-icon" aria-hidden="true">🪪</span>
+      <span data-i18n="nav_passport">Passport</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="/js/i18n.js"></script>
+  <script src="/js/speech.js"></script>
+  <script>
+    let isRecording = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      I18N.init(() => {
+        loadWorkerContext();
+      });
+    });
+
+    function loadWorkerContext() {
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const sector = localStorage.getItem('workright_worker_sector') || 'construction';
+      const workerName = localStorage.getItem('workright_worker_name') || 'Ramu Selvam';
+
+      document.getElementById('barWorkerName').textContent = workerName;
+      document.getElementById('barSector').textContent = sector.toUpperCase();
+    }
+
+    function toggleVoiceRecording() {
+      const micBtn = document.getElementById('micBtn');
+      const micStatus = document.getElementById('micStatus');
+
+      if (isRecording) {
+        VoiceAssistant.stopListening();
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        micBtn.setAttribute('aria-pressed', 'false');
+        micStatus.textContent = I18N.t('hazard_mic_button');
+        return;
+      }
+
+      const lang = I18N.currentLang;
+      VoiceAssistant.startListening({
+        lang: lang,
+        onStart: () => {
+          isRecording = true;
+          micBtn.classList.add('recording');
+          micBtn.setAttribute('aria-pressed', 'true');
+          micStatus.textContent = I18N.t('hazard_listening');
+        },
+        onResult: (result) => {
+          const descInput = document.getElementById('descInput');
+          descInput.value = result.text;
+
+          if (result.suggestedCategory) {
+            document.getElementById('categorySelect').value = result.suggestedCategory;
+            document.getElementById('categoryHint').style.display = 'block';
+          }
+        },
+        onError: (err) => {
+          isRecording = false;
+          micBtn.classList.remove('recording');
+          micBtn.setAttribute('aria-pressed', 'false');
+          micStatus.textContent = I18N.t('hazard_mic_button');
+          showToast('Speech recognition note: ' + err);
+        },
+        onEnd: () => {
+          isRecording = false;
+          micBtn.classList.remove('recording');
+          micBtn.setAttribute('aria-pressed', 'false');
+          micStatus.textContent = I18N.t('hazard_mic_button');
+        }
+      });
+    }
+
+    function handleTextTyping(text) {
+      const suggested = VoiceAssistant.suggestCategory(text);
+      if (suggested) {
+        document.getElementById('categorySelect').value = suggested;
+        document.getElementById('categoryHint').style.display = 'block';
+      }
+    }
+
+    async function submitHazard(e) {
+      e.preventDefault();
+      const description = document.getElementById('descInput').value.trim();
+      const category = document.getElementById('categorySelect').value;
+      const anonymous = document.getElementById('anonToggle').checked;
+      const sector = localStorage.getItem('workright_worker_sector') || 'construction';
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const workerName = localStorage.getItem('workright_worker_name') || 'Ramu Selvam';
+
+      if (!description) {
+        showToast('Please describe the hazard');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/hazards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sector,
+            category,
+            description,
+            anonymous,
+            workerId: anonymous ? null : workerId,
+            workerName: anonymous ? null : workerName
+          })
+        });
+
+        if (!res.ok) throw new Error('Submission failed');
+        const data = await res.json();
+
+        // Show ticket confirmation
+        document.getElementById('submissionSuccess').style.display = 'block';
+        document.getElementById('createdTicketId').textContent = data.ticketId;
+
+        // Reset form
+        document.getElementById('descInput').value = '';
+        document.getElementById('categoryHint').style.display = 'none';
+
+        document.getElementById('submissionSuccess').scrollIntoView({ behavior: 'smooth' });
+        showToast('Hazard reported successfully');
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      }
+    }
+
+    async function checkTicketStatus(e) {
+      e.preventDefault();
+      const ticketId = document.getElementById('ticketInput').value.trim();
+      if (!ticketId) return;
+
+      try {
+        const res = await fetch(`/api/hazards/${encodeURIComponent(ticketId)}`);
+        if (!res.ok) throw new Error('Ticket not found');
+        const data = await res.json();
+
+        const card = document.getElementById('statusResultCard');
+        card.style.display = 'block';
+
+        document.getElementById('resTicketId').textContent = data.id;
+        document.getElementById('resCategory').textContent = data.category;
+        document.getElementById('resReportedBy').textContent = data.reportedBy;
+        document.getElementById('resDescription').textContent = data.description;
+
+        const badge = document.getElementById('resStatusBadge');
+        if (data.status === 'Reported') {
+          badge.className = 'badge-status badge-reported';
+          badge.textContent = '🔴 Reported';
+        } else if (data.status === 'Seen') {
+          badge.className = 'badge-status badge-seen';
+          badge.textContent = '🟡 Seen';
+        } else if (data.status === 'Fixed') {
+          badge.className = 'badge-status badge-fixed';
+          badge.textContent = '🟢 Fixed';
+        }
+
+        const notesRow = document.getElementById('resNotesRow');
+        if (data.notes) {
+          notesRow.style.display = 'block';
+          document.getElementById('resNotes').textContent = data.notes;
+        } else {
+          notesRow.style.display = 'none';
+        }
+      } catch (err) {
+        showToast('Could not find ticket: ' + err.message);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+  </script>
+</body>
+</html>

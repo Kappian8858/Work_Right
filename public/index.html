@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight | UN SDG 8 Fair Wages, Hazard Reporting & Skill Passport</title>
+  <meta name="description" content="WorkRight - One worker ID, three tools, two sectors (Construction & Hospital). Aligned with UN SDG 8. Built for Prompt Wars 2026.">
+  <style>
+    :root {
+      --primary: #1d4ed8;
+      --primary-dark: #1e3a8a;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --sdg-gold: #b45309;
+      --sdg-red: #a21942;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+      color: white;
+      padding: 60px 20px 50px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+    .hero p {
+      max-width: 720px;
+      margin: 0 auto 30px;
+      font-size: 18px;
+      color: #e2e8f0;
+    }
+    .portal-grid {
+      max-width: 960px;
+      margin: -35px auto 40px;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .portal-card {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 32px 24px;
+      border: 2px solid var(--border);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .portal-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+    }
+    .portal-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+    }
+    .portal-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .portal-desc {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 24px;
+      flex: 1;
+    }
+    .btn-launch {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      text-decoration: none;
+      text-align: center;
+      min-height: 56px;
+    }
+    .btn-worker {
+      background: #1d4ed8;
+      color: white;
+    }
+    .btn-worker:hover { background: #1e40af; }
+    .btn-admin {
+      background: #0f172a;
+      color: white;
+    }
+    .btn-admin:hover { background: #1e293b; }
+    .feature-list {
+      list-style: none;
+      margin: 16px 0 24px;
+      padding: 0;
+    }
+    .feature-list li {
+      font-size: 14px;
+      padding: 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #334155;
+    }
+    .section-sdg {
+      max-width: 960px;
+      margin: 0 auto 50px;
+      padding: 0 16px;
+    }
+    .sdg-box {
+      background: #ffffff;
+      border: 2px solid #fed7aa;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-badge">
+      <span>🌐</span> Prompt Wars 2026 • ACM SRMIST × Google for Developers
+    </div>
+    <h1>WorkRight</h1>
+    <p>
+      One Worker ID. Three Essential Tools. Two Critical Sectors.<br>
+      Empowering shift workers in Construction &amp; Healthcare with wage verification, voice hazard reporting, and verifiable skill passports.
+    </p>
+  </header>
+
+  <main>
+    <div class="portal-grid">
+      <!-- Portal 1: Worker Interface -->
+      <article class="portal-card" style="border-top: 6px solid #2563eb;">
+        <div>
+          <div class="portal-icon">📱</div>
+          <h2 class="portal-title">Worker Interface</h2>
+          <span style="font-size: 12px; font-weight: 700; color: #1d4ed8; text-transform: uppercase;">
+            Phone-First • Voice-Driven • Zero Install
+          </span>
+          <p class="portal-desc" style="margin-top: 8px;">
+            Optimized for low-end mobile devices and low-literacy workers. Features Tamil, Hindi, and English support with native Web Speech STT and TTS.
+          </p>
+          <ul class="feature-list">
+            <li>💰 <strong>Pay Checker:</strong> Tamil Nadu statutory minimum wage &amp; overtime calculation</li>
+            <li>🎙️ <strong>Hazard Reporter:</strong> Voice input in Tamil/Hindi/English with auto-categorization</li>
+            <li>🪪 <strong>Skill Passport:</strong> Portable QR code credential without revealing pay amounts</li>
+          </ul>
+        </div>
+        <a href="/worker/" class="btn-launch btn-worker">
+          <span>🚀 Launch Worker Portal</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </article>
+
+      <!-- Portal 2: Employer Admin Dashboard -->
+      <article class="portal-card" style="border-top: 6px solid #0f172a;">
+        <div>
+          <div class="portal-icon">🖥️</div>
+          <h2 class="portal-title">Employer Admin Dashboard</h2>
+          <span style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase;">
+            Desktop &amp; Tablet Ready • Token Protected
+          </span>
+          <p class="portal-desc" style="margin-top: 8px;">
+            Comprehensive management portal for site managers and hospital HR to monitor pay compliance, triage safety hazards, and search certified workforce skills.
+          </p>
+          <ul class="feature-list">
+            <li>📊 <strong>Pay Compliance:</strong> Underpayment audit with employer correction responses</li>
+            <li>⚠️ <strong>Open Hazards:</strong> Real-time status update pipeline (Reported → Seen → Fixed)</li>
+            <li>👥 <strong>Workforce Directory:</strong> Filter by trade/skill with live passport verification links</li>
+          </ul>
+        </div>
+        <a href="/admin/pay.html" class="btn-launch btn-admin">
+          <span>🛡️ Launch Employer Admin</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </article>
+    </div>
+
+    <!-- UN SDG 8 Section -->
+    <section class="section-sdg">
+      <div class="sdg-box">
+        <h3 style="font-size: 18px; color: #9a3412; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <span>🎯</span> Aligned with UN SDG 8 — Decent Work &amp; Economic Growth
+        </h3>
+        <p style="font-size: 14px; color: #475569;">
+          WorkRight connects wages, workplace safety, and skill accreditation into a single verifiable identity. Hours logged verify statutory wages, hazard reports make high-risk sites accountable, and clean work records build portable proof that liberates workers from starting at zero on every new contract.
+        </p>
+        <div style="font-size: 13px; color: #64748b; border-top: 1px solid #fed7aa; padding-top: 8px;">
+          <strong>Deployment:</strong> Google Cloud Run (Containerized Alpine Node.js) • <strong>Region:</strong> asia-south1 (Mumbai)
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

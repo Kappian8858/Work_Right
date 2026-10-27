@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight Admin - Workforce Skill Directory</title>
+  <link rel="stylesheet" href="/css/admin.css">
+  <style>
+    .skill-tag {
+      display: inline-block;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      margin: 2px 2px 2px 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" role="navigation" aria-label="Admin Navigation">
+    <div class="sidebar-header">
+      <a href="/admin/pay.html" class="sidebar-brand">
+        <span aria-hidden="true">🛡️</span>
+        <span>WorkRight Admin</span>
+      </a>
+      <span class="sidebar-badge">UN SDG 8 Compliant</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/admin/pay.html" class="sidebar-link">
+        <span aria-hidden="true">💰</span>
+        <span>Pay Compliance</span>
+      </a>
+      <a href="/admin/hazards.html" class="sidebar-link">
+        <span aria-hidden="true">⚠️</span>
+        <span>Open Hazards</span>
+      </a>
+      <a href="/admin/workforce.html" class="sidebar-link active" aria-current="page">
+        <span aria-hidden="true">👥</span>
+        <span>Workforce Skills</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="/worker/" target="_blank">
+        <span aria-hidden="true">📱</span>
+        <span>Launch Worker View ↗</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="admin-main" role="main">
+    <!-- Topbar -->
+    <header class="admin-topbar">
+      <div>
+        <h1 class="topbar-title">Workforce Skill Directory</h1>
+        <p style="font-size: 13px; color: var(--admin-text-muted);">Verifiable talent pool with portable Skill Passports</p>
+      </div>
+
+      <div class="topbar-controls">
+        <!-- Sector Toggle -->
+        <div class="sector-toggle-group" role="group" aria-label="Sector Filter">
+          <button type="button" class="sector-btn active" data-sector="construction" onclick="switchSector('construction')">
+            🏗️ Construction
+          </button>
+          <button type="button" class="sector-btn" data-sector="hospital" onclick="switchSector('hospital')">
+            🏥 Hospital
+          </button>
+        </div>
+
+        <div class="token-chip" title="Admin Token">
+          <span aria-hidden="true">🔑</span>
+          <span>Token: <strong id="tokenDisplay">admin123</strong></span>
+          <button type="button" class="btn-action" style="padding: 2px 6px; font-size: 11px;" onclick="promptSetToken()">Edit</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="admin-content">
+      <!-- Summary Bar -->
+      <section class="summary-grid" aria-label="Workforce Statistics">
+        <div class="summary-card">
+          <div class="card-title">Registered Workers</div>
+          <div class="card-value value-primary" id="statWorkersCount">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-title">Total Logged Weeks</div>
+          <div class="card-value value-success" id="statLoggedWeeks">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-title">Distinct Trade Skills</div>
+          <div class="card-value value-primary" id="statSkillsCount">0</div>
+        </div>
+      </section>
+
+      <!-- Workforce Table Card -->
+      <section class="table-card" aria-label="Workforce Table">
+        <div class="table-header-bar">
+          <h2 style="font-size: 16px; font-weight: 700;">Verified Worker Directory</h2>
+          <!-- Search Bar to filter by trade or skill -->
+          <div>
+            <input
+              type="search"
+              id="searchInput"
+              class="search-input"
+              placeholder="🔍 Filter by trade, role, or skill..."
+              oninput="filterWorkers(this.value)"
+              aria-label="Filter workers by trade or skill"
+            >
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Employee ID</th>
+                <th scope="col">Name</th>
+                <th scope="col">Trade / Role</th>
+                <th scope="col">Total Weeks Worked</th>
+                <th scope="col">Certified Skills</th>
+                <th scope="col">Skill Passport</th>
+              </tr>
+            </thead>
+            <tbody id="workforceTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                  Loading workforce directory...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    let currentSector = localStorage.getItem('workright_admin_sector') || 'construction';
+    let adminToken = localStorage.getItem('workright_admin_token') || 'admin123';
+    let allWorkers = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('tokenDisplay').textContent = adminToken;
+      updateSectorButtons();
+      loadWorkforce();
+    });
+
+    function switchSector(sec) {
+      currentSector = sec;
+      localStorage.setItem('workright_admin_sector', sec);
+      updateSectorButtons();
+      loadWorkforce();
+    }
+
+    function updateSectorButtons() {
+      document.querySelectorAll('.sector-btn').forEach(btn => {
+        if (btn.getAttribute('data-sector') === currentSector) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    function promptSetToken() {
+      const input = prompt('Enter X-Admin-Token (default: admin123):', adminToken);
+      if (input !== null && input.trim() !== '') {
+        adminToken = input.trim();
+        localStorage.setItem('workright_admin_token', adminToken);
+        document.getElementById('tokenDisplay').textContent = adminToken;
+        loadWorkforce();
+      }
+    }
+
+    async function loadWorkforce() {
+      const tbody = document.getElementById('workforceTableBody');
+      try {
+        const res = await fetch(`/api/admin/workforce?sector=${encodeURIComponent(currentSector)}`, {
+          headers: {
+            'X-Admin-Token': adminToken
+          }
+        });
+
+        if (res.status === 401) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 30px; color: #dc2626; font-weight: 700;">
+                🔒 401 Unauthorized: Invalid X-Admin-Token. Please click "Edit" above and set to "admin123".
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        if (!res.ok) throw new Error('Failed to fetch workforce data');
+        allWorkers = await res.json();
+        renderWorkforceTable(allWorkers);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc2626;">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderWorkforceTable(workers) {
+      const tbody = document.getElementById('workforceTableBody');
+      if (!workers || workers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">No workers found matching criteria.</td></tr>`;
+        return;
+      }
+
+      // Update statistics
+      let totalWeeks = 0;
+      const allSkillsSet = new Set();
+      workers.forEach(w => {
+        totalWeeks += (w.totalWeeksWorked || 0);
+        (w.skills || []).forEach(s => allSkillsSet.add(s));
+      });
+
+      document.getElementById('statWorkersCount').textContent = workers.length;
+      document.getElementById('statLoggedWeeks').textContent = totalWeeks;
+      document.getElementById('statSkillsCount').textContent = allSkillsSet.size;
+
+      tbody.innerHTML = workers.map(w => {
+        const skillsBadges = (w.skills || [])
+          .map(s => `<span class="skill-tag">✓ ${escapeHtml(s)}</span>`)
+          .join('');
+
+        return `
+          <tr>
+            <td><strong>${w.id}</strong></td>
+            <td><strong>${escapeHtml(w.name)}</strong></td>
+            <td>${escapeHtml(w.role)}</td>
+            <td><strong>${w.totalWeeksWorked || 0} Weeks</strong></td>
+            <td>${skillsBadges || '<span style="color: var(--admin-text-muted)">General</span>'}</td>
+            <td>
+              <a
+                href="/passport/${w.id}"
+                target="_blank"
+                class="btn-action btn-action-primary"
+                style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
+                title="Open public verifiable skill passport"
+              >
+                <span>🪪 View Passport</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterWorkers(query) {
+      if (!query || !query.trim()) {
+        renderWorkforceTable(allWorkers);
+        return;
+      }
+      const q = query.trim().toLowerCase();
+      const filtered = allWorkers.filter(w => {
+        const roleMatch = (w.role || '').toLowerCase().includes(q);
+        const nameMatch = (w.name || '').toLowerCase().includes(q);
+        const idMatch = (w.id || '').toLowerCase().includes(q);
+        const skillMatch = (w.skills || []).some(s => s.toLowerCase().includes(q));
+        return roleMatch || nameMatch || idMatch || skillMatch;
+      });
+      renderWorkforceTable(filtered);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+  </script>
+</body>
+</html>

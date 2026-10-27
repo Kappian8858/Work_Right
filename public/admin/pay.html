@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight Admin - Pay Compliance & Wage Audit</title>
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" role="navigation" aria-label="Admin Navigation">
+    <div class="sidebar-header">
+      <a href="/admin/pay.html" class="sidebar-brand">
+        <span aria-hidden="true">🛡️</span>
+        <span>WorkRight Admin</span>
+      </a>
+      <span class="sidebar-badge">UN SDG 8 Compliant</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/admin/pay.html" class="sidebar-link active" aria-current="page">
+        <span aria-hidden="true">💰</span>
+        <span>Pay Compliance</span>
+      </a>
+      <a href="/admin/hazards.html" class="sidebar-link">
+        <span aria-hidden="true">⚠️</span>
+        <span>Open Hazards</span>
+      </a>
+      <a href="/admin/workforce.html" class="sidebar-link">
+        <span aria-hidden="true">👥</span>
+        <span>Workforce Skills</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="/worker/" target="_blank">
+        <span aria-hidden="true">📱</span>
+        <span>Launch Worker View ↗</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="admin-main" role="main">
+    <!-- Topbar -->
+    <header class="admin-topbar">
+      <div>
+        <h1 class="topbar-title">Pay Compliance &amp; Wage Audit</h1>
+        <p style="font-size: 13px; color: var(--admin-text-muted);">Real-time statutory wage monitoring for Tamil Nadu minimum wage</p>
+      </div>
+
+      <div class="topbar-controls">
+        <!-- Sector Toggle -->
+        <div class="sector-toggle-group" role="group" aria-label="Sector Filter">
+          <button type="button" class="sector-btn active" data-sector="construction" onclick="switchSector('construction')">
+            🏗️ Construction
+          </button>
+          <button type="button" class="sector-btn" data-sector="hospital" onclick="switchSector('hospital')">
+            🏥 Hospital
+          </button>
+        </div>
+
+        <!-- Admin Token Config / Display -->
+        <div class="token-chip" title="Admin Token used for X-Admin-Token header">
+          <span aria-hidden="true">🔑</span>
+          <span>Token: <strong id="tokenDisplay">admin123</strong></span>
+          <button type="button" class="btn-action" style="padding: 2px 6px; font-size: 11px;" onclick="promptSetToken()">Edit</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="admin-content">
+      <!-- Summary Bar -->
+      <section class="summary-grid" aria-label="Pay Compliance Statistics">
+        <div class="summary-card">
+          <div class="card-title">Total Workers Audited</div>
+          <div class="card-value value-primary" id="statTotalWorkers">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-title">Violations Flagged This Week</div>
+          <div class="card-value value-danger" id="statViolations">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-title">Employer Actions / Resolved</div>
+          <div class="card-value value-success" id="statResolved">0</div>
+        </div>
+      </section>
+
+      <!-- Pay Records Table -->
+      <section class="table-card" aria-label="Pay Records Table">
+        <div class="table-header-bar">
+          <h2 style="font-size: 16px; font-weight: 700;">Weekly Worker Pay Records</h2>
+          <span style="font-size: 13px; color: var(--admin-text-muted);">Underpaid records automatically sorted to top</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Employee ID</th>
+                <th scope="col">Name</th>
+                <th scope="col">Role</th>
+                <th scope="col">Hours Logged</th>
+                <th scope="col">Expected Pay</th>
+                <th scope="col">Actual Pay Reported</th>
+                <th scope="col">Difference</th>
+                <th scope="col">Status</th>
+                <th scope="col">Employer Action</th>
+              </tr>
+            </thead>
+            <tbody id="payTableBody">
+              <tr>
+                <td colspan="9" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                  Loading pay audit records...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Employer Response Modal -->
+  <div id="responseModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-dialog">
+      <h3 id="modalTitle" class="modal-title">Respond to Wage Discrepancy</h3>
+      <p style="font-size: 13px; color: var(--admin-text-muted); margin-bottom: 14px;">
+        Add an official resolution note for worker <strong id="modalWorkerName">--</strong> (<span id="modalWorkerId">--</span>). This note will appear on their Skill Passport timeline.
+      </p>
+
+      <div class="form-group">
+        <label for="responseNoteInput" class="form-label" style="font-size: 14px; font-weight: 700; display: block; margin-bottom: 6px;">
+          Correction / Resolution Note
+        </label>
+        <textarea
+          id="responseNoteInput"
+          class="form-textarea"
+          rows="3"
+          placeholder="e.g. Discrepancy acknowledged. Additional overtime payout of ₹... queued for next cycle."
+          style="width: 100%; padding: 10px; border: 1px solid var(--admin-border); border-radius: 6px; font-family: inherit;"
+        ></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-action" onclick="closeModal()">Cancel</button>
+        <button type="button" class="btn-action btn-action-primary" onclick="submitResponse()">Save Response</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentSector = localStorage.getItem('workright_admin_sector') || 'construction';
+    let adminToken = localStorage.getItem('workright_admin_token') || 'admin123';
+    let activeModalData = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('tokenDisplay').textContent = adminToken;
+      updateSectorButtons();
+      loadPayRecords();
+    });
+
+    function switchSector(sec) {
+      currentSector = sec;
+      localStorage.setItem('workright_admin_sector', sec);
+      updateSectorButtons();
+      loadPayRecords();
+    }
+
+    function updateSectorButtons() {
+      document.querySelectorAll('.sector-btn').forEach(btn => {
+        if (btn.getAttribute('data-sector') === currentSector) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    function promptSetToken() {
+      const input = prompt('Enter X-Admin-Token (default: admin123):', adminToken);
+      if (input !== null && input.trim() !== '') {
+        adminToken = input.trim();
+        localStorage.setItem('workright_admin_token', adminToken);
+        document.getElementById('tokenDisplay').textContent = adminToken;
+        loadPayRecords();
+      }
+    }
+
+    async function loadPayRecords() {
+      const tbody = document.getElementById('payTableBody');
+      try {
+        const res = await fetch(`/api/pay?sector=${encodeURIComponent(currentSector)}`, {
+          headers: {
+            'X-Admin-Token': adminToken
+          }
+        });
+
+        if (res.status === 401) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 30px; color: #dc2626; font-weight: 700;">
+                🔒 401 Unauthorized: Invalid X-Admin-Token. Please click "Edit" above and set to "admin123".
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        if (!res.ok) throw new Error('Failed to fetch records');
+        const records = await res.json();
+        renderPayTable(records);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #dc2626;">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderPayTable(records) {
+      const tbody = document.getElementById('payTableBody');
+      if (!records || records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">No pay records logged for ${currentSector} sector yet.</td></tr>`;
+        updateStats(0, 0, 0);
+        return;
+      }
+
+      const totalWorkersSet = new Set(records.map(r => r.workerId));
+      const violationsCount = records.filter(r => r.violation).length;
+      const resolvedCount = records.filter(r => r.employerNote || r.resolved).length;
+      updateStats(totalWorkersSet.size, violationsCount, resolvedCount);
+
+      tbody.innerHTML = records.map(r => {
+        const isViolation = r.violation;
+        const diffText = isViolation
+          ? `<strong style="color: #dc2626;">-₹${r.shortfall}</strong>`
+          : `<span style="color: #16a34a;">₹0 (Compliant)</span>`;
+
+        const statusBadge = isViolation
+          ? `<span class="status-pill status-violation">🔴 Violation</span>`
+          : `<span class="status-pill status-fair">🟢 Fair</span>`;
+
+        let actionHtml = '';
+        if (isViolation) {
+          if (r.employerNote) {
+            actionHtml = `
+              <div style="font-size: 12px; color: #166534; margin-bottom: 4px;">
+                <strong>✓ Resolved:</strong> ${escapeHtml(r.employerNote)}
+              </div>
+              <button class="btn-action" style="font-size: 11px;" onclick="openModal('${r.workerId}', '${escapeHtml(r.workerName)}', '${r.id}')">Update Note</button>
+            `;
+          } else {
+            actionHtml = `
+              <button class="btn-action btn-action-primary" onclick="openModal('${r.workerId}', '${escapeHtml(r.workerName)}', '${r.id}')">
+                Respond
+              </button>
+            `;
+          }
+        } else {
+          actionHtml = `<span style="color: var(--admin-text-muted); font-size: 12px;">Verified Compliant</span>`;
+        }
+
+        return `
+          <tr class="${isViolation ? 'violation-row' : ''}">
+            <td><strong>${r.workerId}</strong></td>
+            <td>${escapeHtml(r.workerName)}</td>
+            <td>${escapeHtml(r.role)}</td>
+            <td><strong>${r.hours} hrs</strong></td>
+            <td>₹${r.expectedPay}</td>
+            <td>₹${r.actualPay}</td>
+            <td>${diffText}</td>
+            <td>${statusBadge}</td>
+            <td>${actionHtml}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateStats(total, violations, resolved) {
+      document.getElementById('statTotalWorkers').textContent = total;
+      document.getElementById('statViolations').textContent = violations;
+      document.getElementById('statResolved').textContent = resolved;
+    }
+
+    function openModal(workerId, workerName, recordId) {
+      activeModalData = { workerId, recordId };
+      document.getElementById('modalWorkerName').textContent = workerName;
+      document.getElementById('modalWorkerId').textContent = workerId;
+      document.getElementById('responseNoteInput').value = '';
+      document.getElementById('responseModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      activeModalData = null;
+      document.getElementById('responseModal').style.display = 'none';
+    }
+
+    async function submitResponse() {
+      if (!activeModalData) return;
+      const note = document.getElementById('responseNoteInput').value.trim();
+      if (!note) {
+        alert('Please enter a note');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/pay/respond/${encodeURIComponent(activeModalData.workerId)}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Token': adminToken
+          },
+          body: JSON.stringify({
+            note,
+            recordId: activeModalData.recordId
+          })
+        });
+
+        if (!res.ok) throw new Error('Failed to save correction response');
+        closeModal();
+        loadPayRecords();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+  </script>
+</body>
+</html>

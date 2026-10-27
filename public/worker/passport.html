@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight - Skill Passport</title>
+  <link rel="stylesheet" href="/css/worker.css">
+  <style>
+    .passport-card {
+      border: 2px solid #2563eb;
+      border-radius: 16px;
+      overflow: hidden;
+      background: white;
+      margin-bottom: 20px;
+    }
+    .passport-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: white;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .passport-body {
+      padding: 18px;
+    }
+    .compliance-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 12px;
+    }
+    .compliance-fair {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .compliance-violation {
+      background: #fefce8;
+      color: #854d0e;
+      border: 1px solid #fde047;
+    }
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+      margin-top: 18px;
+      border: 1px solid var(--border-color);
+    }
+    .qr-image {
+      width: 180px;
+      height: 180px;
+      background: white;
+      padding: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header" role="banner">
+    <a href="/worker/index.html" class="brand-wrapper" aria-label="WorkRight Home">
+      <span class="brand-logo" aria-hidden="true">🛡️</span>
+      <span class="brand-name">WorkRight</span>
+    </a>
+    <nav class="lang-toggle-group" aria-label="Language Selector">
+      <button class="lang-btn active" data-lang="en" aria-label="English">EN</button>
+      <button class="lang-btn" data-lang="ta" aria-label="தமிழ்">தமிழ்</button>
+      <button class="lang-btn" data-lang="hi" aria-label="हिंदी">हिंदी</button>
+    </nav>
+  </header>
+
+  <!-- Worker Status Bar -->
+  <aside id="workerBar" class="worker-identity-bar" aria-label="Worker Profile">
+    <div class="worker-chip">
+      <span aria-hidden="true">👷</span>
+      <span id="barWorkerName">Worker</span>
+      <span id="barSector" style="font-size: 11px; padding: 2px 6px; background: #dbeafe; border-radius: 4px;"></span>
+    </div>
+    <a href="/worker/index.html" data-i18n="change_worker">Switch</a>
+  </aside>
+
+  <main class="container" role="main">
+    <div style="margin-bottom: 16px;">
+      <h1 class="page-title" data-i18n="passport_title">Verifiable Skill Passport</h1>
+      <p class="page-subtitle" data-i18n="passport_subtitle">Portable proof of your work history, verified skills, and fair pay record</p>
+    </div>
+
+    <!-- Official Passport Profile Card -->
+    <article class="passport-card" aria-label="Official Skill Passport">
+      <div class="passport-header">
+        <div>
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">Skill Passport</span>
+          <h2 id="workerName" style="font-size: 20px; font-weight: 800; line-height: 1.2;">Loading...</h2>
+        </div>
+        <div style="text-align: right;">
+          <span id="workerIdBadge" style="font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 8px; border-radius: 6px;">ID</span>
+        </div>
+      </div>
+
+      <div class="passport-body">
+        <!-- Field Rows -->
+        <div class="breakdown-list" style="margin-top: 0;">
+          <div class="breakdown-row">
+            <span data-i18n="passport_trade_label">Trade / Role</span>
+            <strong id="workerRole">--</strong>
+          </div>
+          <div class="breakdown-row">
+            <span data-i18n="sector_label">Sector</span>
+            <strong id="workerSector" style="text-transform: capitalize;">--</strong>
+          </div>
+          <div class="breakdown-row highlight">
+            <span data-i18n="passport_weeks_label">Total Weeks Worked</span>
+            <strong id="totalWeeksWorked" style="color: #1d4ed8; font-size: 17px;">0 Weeks</strong>
+          </div>
+        </div>
+
+        <!-- Pay Compliance Status -->
+        <div id="compliancePill" class="compliance-pill compliance-fair">
+          <span id="complianceIcon" aria-hidden="true">🛡️</span>
+          <span id="complianceText">Pay Compliance: 0 clean weeks / 0 total</span>
+        </div>
+
+        <!-- Skills Checklist Section -->
+        <div style="margin-top: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="margin-bottom: 0;" data-i18n="passport_skills_label">Verified Skills</label>
+            <span style="font-size: 12px; color: var(--text-muted);">(Check skills you perform)</span>
+          </div>
+          <form id="skillsForm" onsubmit="saveSkills(event)">
+            <div id="skillsChecklist" class="skill-checkbox-grid">
+              <!-- Dynamically populated skills -->
+            </div>
+            <button type="submit" class="btn-touch btn-secondary" style="margin-top: 8px; min-height: 50px;" data-i18n="passport_update_skills">
+              Update Skills
+            </button>
+          </form>
+        </div>
+
+        <!-- Employment & Wage Timeline -->
+        <div style="margin-top: 24px;">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 10px;" data-i18n="passport_timeline_label">
+            Employment & Wage Timeline
+          </h3>
+          <div id="timelineContainer">
+            <p style="color: var(--text-muted); font-size: 13px;">Loading timeline...</p>
+          </div>
+        </div>
+
+        <!-- QR Code Verification Section -->
+        <div class="qr-container">
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;" data-i18n="passport_qr_label">
+            Shareable Verification QR Code
+          </h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; text-align: center;">
+            Employers can scan to verify work weeks and skills instantly. Pay amounts remain private.
+          </p>
+          <img id="qrImage" class="qr-image" alt="Passport Verification QR Code" src="" style="display: none;">
+          <div id="qrLoading" style="font-size: 13px; color: var(--text-muted); padding: 30px;">Generating QR Code...</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Share Button (Primary Action) -->
+    <div style="margin-bottom: 24px;">
+      <button type="button" id="sharePassportBtn" class="btn-touch btn-primary" onclick="sharePassport()" aria-label="Share My Passport">
+        <span aria-hidden="true">🔗</span>
+        <span data-i18n="passport_share_button">Share My Passport</span>
+      </button>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" role="status"></div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav" aria-label="Bottom Navigation">
+    <a href="/worker/pay.html" class="nav-item" aria-label="Pay Checker">
+      <span class="nav-icon" aria-hidden="true">💰</span>
+      <span data-i18n="nav_pay">Pay</span>
+    </a>
+    <a href="/worker/hazard.html" class="nav-item" aria-label="Hazard Reporter">
+      <span class="nav-icon" aria-hidden="true">🎙️</span>
+      <span data-i18n="nav_hazard">Hazard</span>
+    </a>
+    <a href="/worker/passport.html" class="nav-item active" aria-label="Skill Passport" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">🪪</span>
+      <span data-i18n="nav_passport">Passport</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="/js/i18n.js"></script>
+  <script>
+    let currentPassport = null;
+    let sectorConfig = null;
+    let publicPassportUrl = '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      I18N.init(() => {
+        loadPassport();
+      });
+    });
+
+    async function loadPassport() {
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const sector = localStorage.getItem('workright_worker_sector') || 'construction';
+
+      try {
+        // Fetch sector definitions
+        const secRes = await fetch('/api/sectors');
+        const sectors = await secRes.json();
+        sectorConfig = sectors[sector] || sectors['construction'];
+
+        // Fetch worker passport
+        const res = await fetch(`/api/passport/${workerId}`);
+        if (!res.ok) throw new Error('Worker passport not found');
+        currentPassport = await res.json();
+
+        // Update Top identity bar
+        document.getElementById('barWorkerName').textContent = currentPassport.name;
+        document.getElementById('barSector').textContent = currentPassport.sector.toUpperCase();
+
+        renderPassport(currentPassport);
+        loadQRCode(workerId);
+      } catch (err) {
+        showToast('Error loading passport: ' + err.message);
+      }
+    }
+
+    function renderPassport(data) {
+      document.getElementById('workerName').textContent = data.name;
+      document.getElementById('workerIdBadge').textContent = data.id;
+      document.getElementById('workerRole').textContent = data.role;
+      document.getElementById('workerSector').textContent = data.sector;
+      document.getElementById('totalWeeksWorked').textContent = `${data.totalWeeksWorked} Weeks Logged`;
+
+      // Compliance
+      const comp = data.compliance;
+      const compPill = document.getElementById('compliancePill');
+      const compText = document.getElementById('complianceText');
+      const compIcon = document.getElementById('complianceIcon');
+
+      if (comp.violationsCount > 0) {
+        compPill.className = 'compliance-pill compliance-violation';
+        compIcon.textContent = '⚠️';
+        compText.textContent = `Pay Compliance: ${comp.violationsCount} underpaid weeks recorded • Resolution tracked`;
+      } else {
+        compPill.className = 'compliance-pill compliance-fair';
+        compIcon.textContent = '🛡️';
+        compText.textContent = `Pay Compliance: 100% Fair Wage Record (${comp.cleanWeeksCount}/${comp.totalWeeks} compliant)`;
+      }
+
+      // Render Skills Checklist
+      const skillsContainer = document.getElementById('skillsChecklist');
+      skillsContainer.innerHTML = '';
+      const availableSkills = (sectorConfig && sectorConfig.skills) || ['Safety Protocols'];
+      const workerSkills = new Set(data.skills || []);
+
+      availableSkills.forEach(skill => {
+        const item = document.createElement('label');
+        item.className = 'skill-checkbox-item';
+        const isChecked = workerSkills.has(skill);
+
+        item.innerHTML = `
+          <input type="checkbox" name="skills" value="${skill}" ${isChecked ? 'checked' : ''}>
+          <span>${skill}</span>
+        `;
+        skillsContainer.appendChild(item);
+      });
+
+      // Render Timeline
+      const timelineContainer = document.getElementById('timelineContainer');
+      if (!data.timeline || data.timeline.length === 0) {
+        timelineContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No logged work weeks yet. Log hours in Pay Checker to build your history!</p>';
+      } else {
+        timelineContainer.innerHTML = data.timeline.map(item => `
+          <div class="timeline-item">
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
+              <span>Week of ${item.weekDate}</span>
+              <span class="status-pill ${item.violation ? 'status-violation' : 'status-fair'}" style="font-size: 11px;">
+                ${item.violation ? '🔴 Underpaid' : '🟢 Fair Wage'}
+              </span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+              Logged Hours: <strong>${item.hours} hrs</strong>
+            </div>
+            ${item.employerNote ? `
+              <div style="font-size: 12px; color: #1e40af; background: #dbeafe; padding: 4px 8px; border-radius: 4px; margin-top: 6px;">
+                <strong>Employer Note:</strong> ${item.employerNote}
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      }
+    }
+
+    async function loadQRCode(workerId) {
+      try {
+        const res = await fetch(`/api/passport/${workerId}/qr`);
+        if (!res.ok) throw new Error('QR failed');
+        const data = await res.json();
+        publicPassportUrl = data.publicUrl;
+
+        const qrImg = document.getElementById('qrImage');
+        qrImg.src = data.qrCode;
+        qrImg.style.display = 'block';
+        document.getElementById('qrLoading').style.display = 'none';
+      } catch (err) {
+        document.getElementById('qrLoading').textContent = 'QR Code generation unavailable';
+      }
+    }
+
+    async function saveSkills(e) {
+      e.preventDefault();
+      const workerId = localStorage.getItem('workright_worker_id') || 'WRK-C101';
+      const checked = Array.from(document.querySelectorAll('input[name="skills"]:checked')).map(cb => cb.value);
+
+      try {
+        const res = await fetch(`/api/passport/${workerId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skills: checked })
+        });
+
+        if (!res.ok) throw new Error('Failed to update skills');
+        showToast(I18N.t('passport_skills_saved'));
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      }
+    }
+
+    function sharePassport() {
+      const url = publicPassportUrl || `${window.location.origin}/passport/${localStorage.getItem('workright_worker_id') || 'WRK-C101'}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          showToast(I18N.t('passport_copied'));
+        }).catch(() => {
+          prompt('Copy this link to share your passport:', url);
+        });
+      } else {
+        prompt('Copy this link to share your passport:', url);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+  </script>
+</body>
+</html>

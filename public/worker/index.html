@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight - Worker Portal</title>
+  <link rel="stylesheet" href="/css/worker.css">
+</head>
+<body>
+  <!-- Top App Header -->
+  <header class="app-header" role="banner">
+    <a href="/worker/index.html" class="brand-wrapper" aria-label="WorkRight Home">
+      <span class="brand-logo" aria-hidden="true">🛡️</span>
+      <span class="brand-name">WorkRight</span>
+    </a>
+    <!-- Language Toggle -->
+    <nav class="lang-toggle-group" aria-label="Language Selector">
+      <button class="lang-btn active" data-lang="en" aria-label="English Language" aria-pressed="true">EN</button>
+      <button class="lang-btn" data-lang="ta" aria-label="தமிழ் மொழி" aria-pressed="false">தமிழ்</button>
+      <button class="lang-btn" data-lang="hi" aria-label="हिंदी भाषा" aria-pressed="false">हिंदी</button>
+    </nav>
+  </header>
+
+  <!-- Worker Identity Bar -->
+  <aside id="workerBar" class="worker-identity-bar" style="display: none;" aria-label="Worker Profile">
+    <div class="worker-chip">
+      <span aria-hidden="true">👷</span>
+      <span id="barWorkerGreeting">Hello Worker</span>
+      <span id="barSectorTag" style="font-size: 11px; padding: 2px 6px; background: #dbeafe; border-radius: 4px;"></span>
+    </div>
+    <a id="switchWorkerBtn" href="#" role="button" data-i18n="change_worker">Switch Worker</a>
+  </aside>
+
+  <main class="container" role="main">
+    <!-- First Time Setup / Worker Selector Modal Card -->
+    <section id="loginCard" class="card" aria-labelledby="loginHeading">
+      <h1 id="loginHeading" class="page-title" data-i18n="home_title">WorkRight Worker Portal</h1>
+      <p class="page-subtitle" data-i18n="app_tagline">Dignity, Fair Wages & Safe Work for Every Worker</p>
+
+      <form id="loginForm" onsubmit="handleWorkerLogin(event)">
+        <div class="form-group">
+          <label for="workerIdInput" class="form-label" data-i18n="worker_id_label">Employee ID</label>
+          <input type="text" id="workerIdInput" class="form-input" placeholder="e.g. WRK-C101" required autocomplete="off" aria-required="true">
+        </div>
+
+        <div class="form-group">
+          <label for="sectorSelect" class="form-label" data-i18n="sector_label">Sector</label>
+          <select id="sectorSelect" class="form-select" required aria-required="true">
+            <option value="construction" data-i18n="sector_construction">Construction</option>
+            <option value="hospital" data-i18n="sector_hospital">Hospital</option>
+          </select>
+        </div>
+
+        <!-- 1-Click Demo Worker Chooser -->
+        <div class="form-group">
+          <label for="demoSelect" class="form-label" style="font-size: 13px; color: var(--text-muted);">Quick Demo Login (Select Sample Worker):</label>
+          <select id="demoSelect" class="form-select" onchange="applyDemoWorker(this.value)" aria-label="Sample Demo Worker">
+            <option value="">-- Choose Sample Profile --</option>
+            <option value="WRK-C101|construction|Ramu Selvam">WRK-C101: Ramu Selvam (Mason - Construction)</option>
+            <option value="WRK-C102|construction|Muthu Kumar">WRK-C102: Muthu Kumar (Plumber - Construction)</option>
+            <option value="WRK-H201|hospital|Priya Manoharan">WRK-H201: Priya Manoharan (Sanitation - Hospital)</option>
+            <option value="WRK-H202|hospital|Deepa Shankaran">WRK-H202: Deepa Shankaran (Ward Boy - Hospital)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-touch btn-primary" data-i18n="save_profile">
+          <span>Continue</span> <span>→</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- Worker Action Dashboard (Max 3 Primary Actions Visible at Once) -->
+    <section id="dashboardSection" style="display: none;" aria-label="Worker Dashboard">
+      <div style="margin-bottom: 20px;">
+        <h1 class="page-title">
+          <span data-i18n="greeting">Hello</span>, <span id="workerGreetingName">Worker</span>!
+        </h1>
+        <p class="page-subtitle" id="workerRoleSubtitle">Construction Sector</p>
+      </div>
+
+      <!-- Action 1: Check My Pay -->
+      <a href="/worker/pay.html" class="btn-touch btn-primary" style="margin-bottom: 16px;" aria-label="Check My Pay">
+        <span style="font-size: 26px;" aria-hidden="true">💰</span>
+        <span data-i18n="pay_button">Check My Pay</span>
+      </a>
+
+      <!-- Action 2: Report a Hazard -->
+      <a href="/worker/hazard.html" class="btn-touch btn-secondary" style="margin-bottom: 16px; border-color: #f59e0b; color: #b45309;" aria-label="Report a Hazard">
+        <span style="font-size: 26px;" aria-hidden="true">🎙️</span>
+        <span data-i18n="hazard_button">Report a Hazard</span>
+      </a>
+
+      <!-- Action 3: My Skill Passport -->
+      <a href="/worker/passport.html" class="btn-touch btn-secondary" style="border-color: #2563eb; color: #1d4ed8;" aria-label="My Skill Passport">
+        <span style="font-size: 26px;" aria-hidden="true">🪪</span>
+        <span data-i18n="passport_button">My Skill Passport</span>
+      </a>
+    </section>
+  </main>
+
+  <!-- Bottom Navigation Bar (Three Icons: Pay / Hazard / Passport) -->
+  <nav class="bottom-nav" aria-label="Bottom Navigation">
+    <a href="/worker/pay.html" class="nav-item" aria-label="Pay Checker">
+      <span class="nav-icon" aria-hidden="true">💰</span>
+      <span data-i18n="nav_pay">Pay</span>
+    </a>
+    <a href="/worker/hazard.html" class="nav-item" aria-label="Hazard Reporter">
+      <span class="nav-icon" aria-hidden="true">🎙️</span>
+      <span data-i18n="nav_hazard">Hazard</span>
+    </a>
+    <a href="/worker/passport.html" class="nav-item" aria-label="Skill Passport">
+      <span class="nav-icon" aria-hidden="true">🪪</span>
+      <span data-i18n="nav_passport">Passport</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="/js/i18n.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      I18N.init(() => {
+        checkStoredWorker();
+      });
+    });
+
+    function checkStoredWorker() {
+      const workerId = localStorage.getItem('workright_worker_id');
+      const sector = localStorage.getItem('workright_worker_sector');
+      const workerName = localStorage.getItem('workright_worker_name');
+
+      if (workerId && sector) {
+        showDashboard(workerId, sector, workerName);
+      } else {
+        showLogin();
+      }
+    }
+
+    function showDashboard(workerId, sector, workerName) {
+      document.getElementById('loginCard').style.display = 'none';
+      document.getElementById('dashboardSection').style.display = 'block';
+      document.getElementById('workerBar').style.display = 'flex';
+
+      document.getElementById('workerGreetingName').textContent = workerName || workerId;
+      document.getElementById('barWorkerGreeting').textContent = workerName || workerId;
+      document.getElementById('barSectorTag').textContent = sector.toUpperCase();
+      document.getElementById('workerRoleSubtitle').textContent = `${sector.charAt(0).toUpperCase() + sector.slice(1)} Sector • ${workerId}`;
+    }
+
+    function showLogin() {
+      document.getElementById('loginCard').style.display = 'block';
+      document.getElementById('dashboardSection').style.display = 'none';
+      document.getElementById('workerBar').style.display = 'none';
+    }
+
+    function applyDemoWorker(val) {
+      if (!val) return;
+      const [id, sector, name] = val.split('|');
+      document.getElementById('workerIdInput').value = id;
+      document.getElementById('sectorSelect').value = sector;
+    }
+
+    async function handleWorkerLogin(e) {
+      e.preventDefault();
+      const workerId = document.getElementById('workerIdInput').value.trim().toUpperCase();
+      const sector = document.getElementById('sectorSelect').value;
+
+      let workerName = workerId;
+      try {
+        const res = await fetch(`/api/passport/${workerId}`);
+        if (res.ok) {
+          const data = await res.json();
+          workerName = data.name || workerId;
+        }
+      } catch (err) {
+        console.warn('Could not verify worker online, using input ID');
+      }
+
+      localStorage.setItem('workright_worker_id', workerId);
+      localStorage.setItem('workright_worker_sector', sector);
+      localStorage.setItem('workright_worker_name', workerName);
+
+      showDashboard(workerId, sector, workerName);
+    }
+
+    document.getElementById('switchWorkerBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('workright_worker_id');
+      localStorage.removeItem('workright_worker_sector');
+      localStorage.removeItem('workright_worker_name');
+      showLogin();
+    });
+  </script>
+</body>
+</html>

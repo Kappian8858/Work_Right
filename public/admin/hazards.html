@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkRight Admin - Open Hazards & Safety Management</title>
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" role="navigation" aria-label="Admin Navigation">
+    <div class="sidebar-header">
+      <a href="/admin/pay.html" class="sidebar-brand">
+        <span aria-hidden="true">🛡️</span>
+        <span>WorkRight Admin</span>
+      </a>
+      <span class="sidebar-badge">UN SDG 8 Compliant</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/admin/pay.html" class="sidebar-link">
+        <span aria-hidden="true">💰</span>
+        <span>Pay Compliance</span>
+      </a>
+      <a href="/admin/hazards.html" class="sidebar-link active" aria-current="page">
+        <span aria-hidden="true">⚠️</span>
+        <span>Open Hazards</span>
+      </a>
+      <a href="/admin/workforce.html" class="sidebar-link">
+        <span aria-hidden="true">👥</span>
+        <span>Workforce Skills</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="/worker/" target="_blank">
+        <span aria-hidden="true">📱</span>
+        <span>Launch Worker View ↗</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="admin-main" role="main">
+    <!-- Topbar -->
+    <header class="admin-topbar">
+      <div>
+        <h1 class="topbar-title">Open Workplace Hazards</h1>
+        <p style="font-size: 13px; color: var(--admin-text-muted);">Real-time hazard triage and remediation management</p>
+      </div>
+
+      <div class="topbar-controls">
+        <!-- Sector Toggle -->
+        <div class="sector-toggle-group" role="group" aria-label="Sector Filter">
+          <button type="button" class="sector-btn active" data-sector="construction" onclick="switchSector('construction')">
+            🏗️ Construction
+          </button>
+          <button type="button" class="sector-btn" data-sector="hospital" onclick="switchSector('hospital')">
+            🏥 Hospital
+          </button>
+        </div>
+
+        <div class="token-chip" title="Admin Token">
+          <span aria-hidden="true">🔑</span>
+          <span>Token: <strong id="tokenDisplay">admin123</strong></span>
+          <button type="button" class="btn-action" style="padding: 2px 6px; font-size: 11px;" onclick="promptSetToken()">Edit</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="admin-content">
+      <!-- Summary Bar -->
+      <section class="summary-grid" aria-label="Hazards Statistics">
+        <div class="summary-card">
+          <div class="card-title">Total Open Hazards</div>
+          <div class="card-value value-danger" id="statTotalOpen">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-title">Critical Severity</div>
+          <div class="card-value value-warning" id="statCritical">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-title">Resolved / Fixed</div>
+          <div class="card-value value-success" id="statResolved">0</div>
+        </div>
+      </section>
+
+      <!-- Hazards Table -->
+      <section class="table-card" aria-label="Hazards Table">
+        <div class="table-header-bar">
+          <h2 style="font-size: 16px; font-weight: 700;">Active Workplace Incident Reports</h2>
+          <span style="font-size: 13px; color: var(--admin-text-muted);">Sorted by hours open descending (most urgent first)</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Ticket ID</th>
+                <th scope="col">Category</th>
+                <th scope="col">Description</th>
+                <th scope="col">Reported By</th>
+                <th scope="col">Time Reported</th>
+                <th scope="col">Hours Open</th>
+                <th scope="col">Status</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody id="hazardsTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                  Loading workplace hazards...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    let currentSector = localStorage.getItem('workright_admin_sector') || 'construction';
+    let adminToken = localStorage.getItem('workright_admin_token') || 'admin123';
+    const criticalCategories = ['Fire', 'Electrical', 'Fall', 'Biological'];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('tokenDisplay').textContent = adminToken;
+      updateSectorButtons();
+      loadHazards();
+    });
+
+    function switchSector(sec) {
+      currentSector = sec;
+      localStorage.setItem('workright_admin_sector', sec);
+      updateSectorButtons();
+      loadHazards();
+    }
+
+    function updateSectorButtons() {
+      document.querySelectorAll('.sector-btn').forEach(btn => {
+        if (btn.getAttribute('data-sector') === currentSector) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    function promptSetToken() {
+      const input = prompt('Enter X-Admin-Token (default: admin123):', adminToken);
+      if (input !== null && input.trim() !== '') {
+        adminToken = input.trim();
+        localStorage.setItem('workright_admin_token', adminToken);
+        document.getElementById('tokenDisplay').textContent = adminToken;
+        loadHazards();
+      }
+    }
+
+    async function loadHazards() {
+      const tbody = document.getElementById('hazardsTableBody');
+      try {
+        const res = await fetch(`/api/hazards?sector=${encodeURIComponent(currentSector)}`, {
+          headers: {
+            'X-Admin-Token': adminToken
+          }
+        });
+
+        if (res.status === 401) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 30px; color: #dc2626; font-weight: 700;">
+                🔒 401 Unauthorized: Invalid X-Admin-Token. Please click "Edit" above and set to "admin123".
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        if (!res.ok) throw new Error('Failed to fetch hazards');
+        const list = await res.json();
+        renderHazardsTable(list);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #dc2626;">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderHazardsTable(hazards) {
+      const tbody = document.getElementById('hazardsTableBody');
+      if (!hazards || hazards.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">No hazard reports found for ${currentSector} sector.</td></tr>`;
+        updateStats(0, 0, 0);
+        return;
+      }
+
+      // Compute hours open for each
+      const computed = hazards.map(h => {
+        const createdMs = new Date(h.createdAt).getTime();
+        const nowMs = Date.now();
+        const hoursOpen = Math.max(0, Math.round((nowMs - createdMs) / (3600 * 1000)));
+        return { ...h, hoursOpen };
+      });
+
+      // Sort by hours open descending (most urgent first)
+      computed.sort((a, b) => b.hoursOpen - a.hoursOpen);
+
+      // Summary counts
+      const openCount = computed.filter(h => h.status !== 'Fixed').length;
+      const criticalCount = computed.filter(h => h.status !== 'Fixed' && criticalCategories.includes(h.category)).length;
+      const resolvedCount = computed.filter(h => h.status === 'Fixed').length;
+      updateStats(openCount, criticalCount, resolvedCount);
+
+      tbody.innerHTML = computed.map(h => {
+        const shortDesc = h.description.length > 60
+          ? `${escapeHtml(h.description.slice(0, 60))}...`
+          : escapeHtml(h.description);
+
+        const isCritical = criticalCategories.includes(h.category);
+        const categoryBadge = isCritical
+          ? `<strong style="color: #dc2626;">🚨 ${escapeHtml(h.category)}</strong>`
+          : `<span>${escapeHtml(h.category)}</span>`;
+
+        let statusBadge = '';
+        if (h.status === 'Reported') {
+          statusBadge = `<span class="status-pill status-reported">🔴 Reported</span>`;
+        } else if (h.status === 'Seen') {
+          statusBadge = `<span class="status-pill status-seen">🟡 Seen</span>`;
+        } else {
+          statusBadge = `<span class="status-pill status-fixed">🟢 Fixed</span>`;
+        }
+
+        const dateStr = new Date(h.createdAt).toLocaleString(undefined, {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        return `
+          <tr>
+            <td><strong>${h.id}</strong></td>
+            <td>${categoryBadge}</td>
+            <td title="${escapeHtml(h.description)}">${shortDesc}</td>
+            <td>
+              ${h.anonymous ? '<em style="color: var(--admin-text-muted);">Anonymous</em>' : escapeHtml(h.reportedBy)}
+            </td>
+            <td>${dateStr}</td>
+            <td><strong>${h.hoursOpen} hrs</strong></td>
+            <td>${statusBadge}</td>
+            <td>
+              <select class="btn-action" onchange="updateStatus('${h.id}', this.value)" aria-label="Update status for ticket ${h.id}">
+                <option value="Reported" ${h.status === 'Reported' ? 'selected' : ''}>🔴 Reported</option>
+                <option value="Seen" ${h.status === 'Seen' ? 'selected' : ''}>🟡 Seen</option>
+                <option value="Fixed" ${h.status === 'Fixed' ? 'selected' : ''}>🟢 Fixed</option>
+              </select>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateStats(open, critical, resolved) {
+      document.getElementById('statTotalOpen').textContent = open;
+      document.getElementById('statCritical').textContent = critical;
+      document.getElementById('statResolved').textContent = resolved;
+    }
+
+    async function updateStatus(ticketId, newStatus) {
+      try {
+        const res = await fetch(`/api/hazards/${encodeURIComponent(ticketId)}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Token': adminToken
+          },
+          body: JSON.stringify({
+            status: newStatus,
+            notes: `Status updated to ${newStatus} by admin supervisor`
+          })
+        });
+
+        if (!res.ok) throw new Error('Status update failed');
+        loadHazards();
+      } catch (err) {
+        alert('Error: ' + err.message);
+        loadHazards();
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+  </script>
+</body>
+</html>
