@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WorkRight Admin - Workforce Skill Directory</title>
+  <title>WorkRight Admin - Workforce Skill Directory & Onboarding</title>
   <link rel="stylesheet" href="/css/admin.css">
   <style>
     .skill-tag {
@@ -17,9 +17,54 @@
       font-weight: 600;
       margin: 2px 2px 2px 0;
     }
+    .tab-nav {
+      display: flex;
+      gap: 12px;
+      border-bottom: 2px solid var(--admin-border);
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 10px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--admin-text-muted);
+      cursor: pointer;
+      position: relative;
+    }
+    .tab-btn.active {
+      color: var(--admin-primary);
+    }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--admin-primary);
+      border-radius: 3px 3px 0 0;
+    }
+    .pending-badge {
+      display: inline-block;
+      background: #dc2626;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      margin-left: 6px;
+    }
   </style>
 </head>
 <body>
+  <!-- Auth Check -->
+  <script>
+    if (localStorage.getItem('workright_admin_logged_in') !== 'true') {
+      window.location.replace('/admin/login.html');
+    }
+  </script>
+
   <!-- Sidebar -->
   <aside class="admin-sidebar" role="navigation" aria-label="Admin Navigation">
     <div class="sidebar-header">
@@ -41,14 +86,18 @@
       </a>
       <a href="/admin/workforce.html" class="sidebar-link active" aria-current="page">
         <span aria-hidden="true">👥</span>
-        <span>Workforce Skills</span>
+        <span>Workforce &amp; Onboarding</span>
       </a>
     </nav>
 
     <div class="sidebar-footer">
-      <a href="/worker/" target="_blank">
+      <a href="/worker/" target="_blank" style="margin-bottom: 8px;">
         <span aria-hidden="true">📱</span>
         <span>Launch Worker View ↗</span>
+      </a>
+      <a href="#" onclick="logoutAdmin()" style="color: #f87171;">
+        <span aria-hidden="true">🚪</span>
+        <span>Sign Out Admin</span>
       </a>
     </div>
   </aside>
@@ -58,11 +107,16 @@
     <!-- Topbar -->
     <header class="admin-topbar">
       <div>
-        <h1 class="topbar-title">Workforce Skill Directory</h1>
-        <p style="font-size: 13px; color: var(--admin-text-muted);">Verifiable talent pool with portable Skill Passports</p>
+        <h1 class="topbar-title">Workforce Directory &amp; Onboarding</h1>
+        <p style="font-size: 13px; color: var(--admin-text-muted);">Manage active personnel, create employee profiles, and review worker registration requests</p>
       </div>
 
       <div class="topbar-controls">
+        <!-- Direct Create Employee Button -->
+        <button type="button" class="btn-action btn-action-primary" style="padding: 9px 16px; font-weight: 700; font-size: 14px;" onclick="openCreateWorkerModal()">
+          ➕ Create New Employee
+        </button>
+
         <!-- Sector Toggle -->
         <div class="sector-toggle-group" role="group" aria-label="Sector Filter">
           <button type="button" class="sector-btn active" data-sector="construction" onclick="switchSector('construction')">
@@ -72,84 +126,193 @@
             🏥 Hospital
           </button>
         </div>
-
-        <div class="token-chip" title="Admin Token">
-          <span aria-hidden="true">🔑</span>
-          <span>Token: <strong id="tokenDisplay">admin123</strong></span>
-          <button type="button" class="btn-action" style="padding: 2px 6px; font-size: 11px;" onclick="promptSetToken()">Edit</button>
-        </div>
       </div>
     </header>
 
     <div class="admin-content">
-      <!-- Summary Bar -->
-      <section class="summary-grid" aria-label="Workforce Statistics">
-        <div class="summary-card">
-          <div class="card-title">Registered Workers</div>
-          <div class="card-value value-primary" id="statWorkersCount">0</div>
-        </div>
-        <div class="summary-card">
-          <div class="card-title">Total Logged Weeks</div>
-          <div class="card-value value-success" id="statLoggedWeeks">0</div>
-        </div>
-        <div class="summary-card">
-          <div class="card-title">Distinct Trade Skills</div>
-          <div class="card-value value-primary" id="statSkillsCount">0</div>
-        </div>
-      </section>
+      <!-- Tab Navigation: Active Workforce vs Pending Approvals -->
+      <nav class="tab-nav" aria-label="Workforce View Tabs">
+        <button type="button" id="tabActiveBtn" class="tab-btn active" onclick="switchTab('active')">
+          Active Workforce
+        </button>
+        <button type="button" id="tabPendingBtn" class="tab-btn" onclick="switchTab('pending')">
+          Pending Registrations <span id="pendingBadgeCount" class="pending-badge">0</span>
+        </button>
+      </nav>
 
-      <!-- Workforce Table Card -->
-      <section class="table-card" aria-label="Workforce Table">
-        <div class="table-header-bar">
-          <h2 style="font-size: 16px; font-weight: 700;">Verified Worker Directory</h2>
-          <!-- Search Bar to filter by trade or skill -->
-          <div>
-            <input
-              type="search"
-              id="searchInput"
-              class="search-input"
-              placeholder="🔍 Filter by trade, role, or skill..."
-              oninput="filterWorkers(this.value)"
-              aria-label="Filter workers by trade or skill"
-            >
+      <!-- TAB 1: ACTIVE WORKFORCE -->
+      <section id="sectionActiveWorkforce">
+        <!-- Summary Bar -->
+        <div class="summary-grid" aria-label="Workforce Statistics">
+          <div class="summary-card">
+            <div class="card-title">Active Workers</div>
+            <div class="card-value value-primary" id="statWorkersCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-title">Total Logged Weeks</div>
+            <div class="card-value value-success" id="statLoggedWeeks">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-title">Distinct Trade Skills</div>
+            <div class="card-value value-primary" id="statSkillsCount">0</div>
           </div>
         </div>
 
-        <div style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Employee ID</th>
-                <th scope="col">Name</th>
-                <th scope="col">Trade / Role</th>
-                <th scope="col">Total Weeks Worked</th>
-                <th scope="col">Certified Skills</th>
-                <th scope="col">Skill Passport</th>
-              </tr>
-            </thead>
-            <tbody id="workforceTableBody">
-              <tr>
-                <td colspan="6" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
-                  Loading workforce directory...
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Table Card -->
+        <div class="table-card" aria-label="Workforce Table">
+          <div class="table-header-bar">
+            <h2 style="font-size: 16px; font-weight: 700;">Verified Employee Directory</h2>
+            <div>
+              <input
+                type="search"
+                id="searchInput"
+                class="search-input"
+                placeholder="🔍 Filter by trade, role, name, or skill..."
+                oninput="filterWorkers(this.value)"
+                aria-label="Filter workers"
+              >
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Employee ID</th>
+                  <th scope="col">Username</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Trade / Role</th>
+                  <th scope="col">Total Weeks</th>
+                  <th scope="col">Certified Skills</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="workforceTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                    Loading workforce directory...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: PENDING REGISTRATIONS FOR VERIFICATION -->
+      <section id="sectionPendingRequests" style="display: none;">
+        <div class="table-card" aria-label="Pending Registrations">
+          <div class="table-header-bar">
+            <div>
+              <h2 style="font-size: 16px; font-weight: 700;">Worker Self-Registration Requests</h2>
+              <p style="font-size: 13px; color: var(--admin-text-muted);">Review details and click Accept to generate an official Employee ID</p>
+            </div>
+            <button class="btn-action" onclick="loadPendingRequests()">↻ Refresh Requests</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Request ID</th>
+                  <th scope="col">Worker Name</th>
+                  <th scope="col">Username</th>
+                  <th scope="col">Sector</th>
+                  <th scope="col">Requested Role</th>
+                  <th scope="col">Skills Claimed</th>
+                  <th scope="col">Submitted</th>
+                  <th scope="col">Admin Verification</th>
+                </tr>
+              </thead>
+              <tbody id="pendingTableBody">
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                    Loading pending registration requests...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>
   </main>
 
+  <!-- MODAL: Admin Create New Employee Directly -->
+  <div id="createWorkerModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <h3 id="createModalTitle" class="modal-title">Create New Employee</h3>
+      <p style="font-size: 13px; color: var(--admin-text-muted); margin-bottom: 16px;">
+        Onboard a worker directly across any sector. An official Employee ID will be generated automatically.
+      </p>
+
+      <form id="createWorkerForm" onsubmit="handleAdminCreateWorker(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="newWorkerSector" style="font-size: 13px; font-weight: 700; margin-bottom: 4px; display: block;">Sector</label>
+            <select id="newWorkerSector" class="form-input" style="padding: 10px;" onchange="updateModalRolesAndSkills(this.value)" required>
+              <option value="construction">Construction 🏗️</option>
+              <option value="hospital">Hospital 🏥</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="newWorkerRole" style="font-size: 13px; font-weight: 700; margin-bottom: 4px; display: block;">Trade / Role</label>
+            <select id="newWorkerRole" class="form-input" style="padding: 10px;" required>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="newWorkerName" style="font-size: 13px; font-weight: 700; margin-bottom: 4px; display: block;">Full Name</label>
+          <input type="text" id="newWorkerName" class="form-input" placeholder="e.g. Ramesh Velu" required autocomplete="off">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="newWorkerUsername" style="font-size: 13px; font-weight: 700; margin-bottom: 4px; display: block;">Login Username</label>
+            <input type="text" id="newWorkerUsername" class="form-input" placeholder="e.g. rameshv" required autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="newWorkerPassword" style="font-size: 13px; font-weight: 700; margin-bottom: 4px; display: block;">Password for Worker</label>
+            <input type="text" id="newWorkerPassword" class="form-input" value="password123" required autocomplete="off">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-size: 13px; font-weight: 700; margin-bottom: 6px; display: block;">Certified Skills</label>
+          <div id="modalSkillsCheckboxes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 120px; overflow-y: auto; padding: 6px; border: 1px solid var(--admin-border); border-radius: 6px;">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-action" onclick="closeCreateWorkerModal()">Cancel</button>
+          <button type="submit" class="btn-action btn-action-primary" id="btnSubmitCreateWorker">Create &amp; Generate ID</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let currentSector = localStorage.getItem('workright_admin_sector') || 'construction';
     let adminToken = localStorage.getItem('workright_admin_token') || 'admin123';
     let allWorkers = [];
+    let sectorsConfig = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('tokenDisplay').textContent = adminToken;
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSectorsConfig();
       updateSectorButtons();
       loadWorkforce();
+      loadPendingRequests();
     });
+
+    function logoutAdmin() {
+      localStorage.removeItem('workright_admin_logged_in');
+      window.location.href = '/admin/login.html';
+    }
 
     function switchSector(sec) {
       currentSector = sec;
@@ -168,13 +331,27 @@
       });
     }
 
-    function promptSetToken() {
-      const input = prompt('Enter X-Admin-Token (default: admin123):', adminToken);
-      if (input !== null && input.trim() !== '') {
-        adminToken = input.trim();
-        localStorage.setItem('workright_admin_token', adminToken);
-        document.getElementById('tokenDisplay').textContent = adminToken;
-        loadWorkforce();
+    function switchTab(tab) {
+      if (tab === 'active') {
+        document.getElementById('sectionActiveWorkforce').style.display = 'block';
+        document.getElementById('sectionPendingRequests').style.display = 'none';
+        document.getElementById('tabActiveBtn').classList.add('active');
+        document.getElementById('tabPendingBtn').classList.remove('active');
+      } else {
+        document.getElementById('sectionActiveWorkforce').style.display = 'none';
+        document.getElementById('sectionPendingRequests').style.display = 'block';
+        document.getElementById('tabActiveBtn').classList.remove('active');
+        document.getElementById('tabPendingBtn').classList.add('active');
+        loadPendingRequests();
+      }
+    }
+
+    async function loadSectorsConfig() {
+      try {
+        const res = await fetch('/api/sectors');
+        sectorsConfig = await res.json();
+      } catch (err) {
+        console.warn('Could not load sectors config', err);
       }
     }
 
@@ -182,38 +359,24 @@
       const tbody = document.getElementById('workforceTableBody');
       try {
         const res = await fetch(`/api/admin/workforce?sector=${encodeURIComponent(currentSector)}`, {
-          headers: {
-            'X-Admin-Token': adminToken
-          }
+          headers: { 'X-Admin-Token': adminToken }
         });
-
-        if (res.status === 401) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="6" style="text-align: center; padding: 30px; color: #dc2626; font-weight: 700;">
-                🔒 401 Unauthorized: Invalid X-Admin-Token. Please click "Edit" above and set to "admin123".
-              </td>
-            </tr>
-          `;
-          return;
-        }
 
         if (!res.ok) throw new Error('Failed to fetch workforce data');
         allWorkers = await res.json();
         renderWorkforceTable(allWorkers);
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc2626;">Error: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #dc2626;">Error: ${err.message}</td></tr>`;
       }
     }
 
     function renderWorkforceTable(workers) {
       const tbody = document.getElementById('workforceTableBody');
       if (!workers || workers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">No workers found matching criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">No workers registered for ${currentSector} sector.</td></tr>`;
         return;
       }
 
-      // Update statistics
       let totalWeeks = 0;
       const allSkillsSet = new Set();
       workers.forEach(w => {
@@ -232,7 +395,8 @@
 
         return `
           <tr>
-            <td><strong>${w.id}</strong></td>
+            <td><strong style="color: #1d4ed8;">${w.id}</strong></td>
+            <td><code>${w.username || w.id.toLowerCase()}</code></td>
             <td><strong>${escapeHtml(w.name)}</strong></td>
             <td>${escapeHtml(w.role)}</td>
             <td><strong>${w.totalWeeksWorked || 0} Weeks</strong></td>
@@ -242,10 +406,10 @@
                 href="/passport/${w.id}"
                 target="_blank"
                 class="btn-action btn-action-primary"
-                style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
+                style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-size: 12px;"
                 title="Open public verifiable skill passport"
               >
-                <span>🪪 View Passport</span>
+                <span>🪪 Passport</span>
                 <span aria-hidden="true">↗</span>
               </a>
             </td>
@@ -264,10 +428,161 @@
         const roleMatch = (w.role || '').toLowerCase().includes(q);
         const nameMatch = (w.name || '').toLowerCase().includes(q);
         const idMatch = (w.id || '').toLowerCase().includes(q);
+        const usernameMatch = (w.username || '').toLowerCase().includes(q);
         const skillMatch = (w.skills || []).some(s => s.toLowerCase().includes(q));
-        return roleMatch || nameMatch || idMatch || skillMatch;
+        return roleMatch || nameMatch || idMatch || usernameMatch || skillMatch;
       });
       renderWorkforceTable(filtered);
+    }
+
+    // Pending Registration Requests
+    async function loadPendingRequests() {
+      const tbody = document.getElementById('pendingTableBody');
+      try {
+        const res = await fetch('/api/admin/registration-requests', {
+          headers: { 'X-Admin-Token': adminToken }
+        });
+        if (!res.ok) throw new Error('Failed to load pending requests');
+        const requests = await res.json();
+
+        document.getElementById('pendingBadgeCount').textContent = requests.length;
+
+        if (requests.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">No pending registration requests right now.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = requests.map(r => `
+          <tr>
+            <td><strong>${r.id}</strong></td>
+            <td><strong>${escapeHtml(r.name)}</strong></td>
+            <td><code>${escapeHtml(r.username)}</code></td>
+            <td style="text-transform: capitalize;">${escapeHtml(r.sector)}</td>
+            <td>${escapeHtml(r.role)}</td>
+            <td>${(r.skills || []).map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}</td>
+            <td style="font-size: 12px; color: var(--admin-text-muted);">${new Date(r.requestedAt).toLocaleString()}</td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn-action btn-action-primary" style="font-size: 12px; background: #16a34a; border-color: #15803d;" onclick="approveRequest('${r.id}')">
+                  ✓ Accept &amp; Generate ID
+                </button>
+                <button class="btn-action" style="font-size: 12px; color: #dc2626;" onclick="rejectRequest('${r.id}')">
+                  ✕ Decline
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #dc2626;">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function approveRequest(requestId) {
+      if (!confirm('Approve this worker account and generate their official Employee ID?')) return;
+      try {
+        const res = await fetch(`/api/admin/registration-requests/${requestId}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Token': adminToken
+          }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Approval failed');
+
+        alert(`✅ Worker Approved!\nAssigned Employee ID: ${data.worker.id}\nThe worker can now log in using either their username ("${data.worker.username}") or Employee ID ("${data.worker.id}").`);
+        loadPendingRequests();
+        loadWorkforce();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function rejectRequest(requestId) {
+      const reason = prompt('Optional reason for declining:');
+      try {
+        const res = await fetch(`/api/admin/registration-requests/${requestId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Token': adminToken
+          },
+          body: JSON.stringify({ reason })
+        });
+        if (!res.ok) throw new Error('Rejection failed');
+        loadPendingRequests();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // Modal Create Worker Directly
+    function openCreateWorkerModal() {
+      document.getElementById('newWorkerSector').value = currentSector;
+      updateModalRolesAndSkills(currentSector);
+      document.getElementById('createWorkerModal').style.display = 'flex';
+    }
+
+    function closeCreateWorkerModal() {
+      document.getElementById('createWorkerModal').style.display = 'none';
+    }
+
+    function updateModalRolesAndSkills(sec) {
+      if (!sectorsConfig) return;
+      const conf = sectorsConfig[sec] || sectorsConfig['construction'];
+
+      // Roles dropdown
+      const roleSelect = document.getElementById('newWorkerRole');
+      roleSelect.innerHTML = (conf.roles || []).map(r => `<option value="${r}">${r}</option>`).join('');
+
+      // Skills checkboxes
+      const skillsContainer = document.getElementById('modalSkillsCheckboxes');
+      skillsContainer.innerHTML = (conf.skills || []).map(s => `
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+          <input type="checkbox" name="modalSkills" value="${s}" checked>
+          <span>${s}</span>
+        </label>
+      `).join('');
+    }
+
+    async function handleAdminCreateWorker(e) {
+      e.preventDefault();
+      const sector = document.getElementById('newWorkerSector').value;
+      const role = document.getElementById('newWorkerRole').value;
+      const name = document.getElementById('newWorkerName').value.trim();
+      const username = document.getElementById('newWorkerUsername').value.trim();
+      const password = document.getElementById('newWorkerPassword').value;
+
+      const checkedSkills = Array.from(document.querySelectorAll('input[name="modalSkills"]:checked')).map(cb => cb.value);
+
+      try {
+        const res = await fetch('/api/admin/workers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Token': adminToken
+          },
+          body: JSON.stringify({
+            sector,
+            role,
+            name,
+            username,
+            password,
+            skills: checkedSkills
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to create worker');
+
+        alert(`✅ Employee Onboarded Successfully!\n\nName: ${data.worker.name}\nEmployee ID: ${data.worker.id}\nUsername: ${data.worker.username}\nSector: ${data.worker.sector.toUpperCase()}\n\nWorker can now log in immediately with either Username or Employee ID!`);
+        closeCreateWorkerModal();
+        document.getElementById('createWorkerForm').reset();
+        loadWorkforce();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
     }
 
     function escapeHtml(str) {

@@ -111,6 +111,10 @@
         <!-- Field Rows -->
         <div class="breakdown-list" style="margin-top: 0;">
           <div class="breakdown-row">
+            <span>Username</span>
+            <code id="workerUsernameBadge" style="font-weight: 700; color: #1e40af;">--</code>
+          </div>
+          <div class="breakdown-row">
             <span data-i18n="passport_trade_label">Trade / Role</span>
             <strong id="workerRole">--</strong>
           </div>
@@ -240,6 +244,7 @@
     function renderPassport(data) {
       document.getElementById('workerName').textContent = data.name;
       document.getElementById('workerIdBadge').textContent = data.id;
+      document.getElementById('workerUsernameBadge').textContent = data.username || data.id.toLowerCase();
       document.getElementById('workerRole').textContent = data.role;
       document.getElementById('workerSector').textContent = data.sector;
       document.getElementById('totalWeeksWorked').textContent = `${data.totalWeeksWorked} Weeks Logged`;

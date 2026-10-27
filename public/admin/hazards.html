@@ -7,6 +7,16 @@
   <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
+  <!-- Auth Check -->
+  <script>
+    if (localStorage.getItem('workright_admin_logged_in') !== 'true') {
+      window.location.replace('/admin/login.html');
+    }
+    function logoutAdmin() {
+      localStorage.removeItem('workright_admin_logged_in');
+      window.location.href = '/admin/login.html';
+    }
+  </script>
   <!-- Sidebar -->
   <aside class="admin-sidebar" role="navigation" aria-label="Admin Navigation">
     <div class="sidebar-header">
@@ -33,9 +43,13 @@
     </nav>
 
     <div class="sidebar-footer">
-      <a href="/worker/" target="_blank">
+      <a href="/worker/" target="_blank" style="margin-bottom: 8px;">
         <span aria-hidden="true">📱</span>
         <span>Launch Worker View ↗</span>
+      </a>
+      <a href="#" onclick="logoutAdmin()" style="color: #f87171;">
+        <span aria-hidden="true">🚪</span>
+        <span>Sign Out Admin</span>
       </a>
     </div>
   </aside>

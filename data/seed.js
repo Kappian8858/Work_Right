@@ -1,93 +1,151 @@
 /**
  * In-Memory Seed Data and Store for WorkRight
  * Connects Workers, Pay Records, Hazards, and Skill Passports.
+ * Includes Employee ID generation, Worker Registration approval queue,
+ * and Username/Password authentication.
  */
 
 const { calculateExpectedPay, checkViolation } = require('../logic/payCalculator');
 
-// Initial seed lists
+// Initial seed workers (10 workers: 5 construction, 5 hospital)
 const initialWorkers = [
   // Construction Workers
   {
     id: 'WRK-C101',
+    username: 'ramu',
+    password: 'password123',
     name: 'Ramu Selvam',
     role: 'Mason',
     sector: 'construction',
     skills: ['Bricklaying', 'Scaffolding', 'Safety Protocols'],
-    joinedDate: '2024-03-15'
+    joinedDate: '2024-03-15',
+    status: 'active'
   },
   {
     id: 'WRK-C102',
+    username: 'muthu',
+    password: 'password123',
     name: 'Muthu Kumar',
     role: 'Plumber',
     sector: 'construction',
     skills: ['Plumbing', 'Welding', 'Safety Protocols'],
-    joinedDate: '2024-04-10'
+    joinedDate: '2024-04-10',
+    status: 'active'
   },
   {
     id: 'WRK-C103',
+    username: 'karthik',
+    password: 'password123',
     name: 'Karthik Raj',
     role: 'Labourer',
     sector: 'construction',
     skills: ['Bricklaying', 'Scaffolding', 'Safety Protocols'],
-    joinedDate: '2024-06-01'
+    joinedDate: '2024-06-01',
+    status: 'active'
   },
   {
     id: 'WRK-C104',
+    username: 'senthil',
+    password: 'password123',
     name: 'Senthil Nathan',
     role: 'Supervisor',
     sector: 'construction',
     skills: ['Scaffolding', 'Electrical Wiring', 'Safety Protocols'],
-    joinedDate: '2023-11-20'
+    joinedDate: '2023-11-20',
+    status: 'active'
   },
   {
     id: 'WRK-C105',
+    username: 'arumugam',
+    password: 'password123',
     name: 'Arumugam V',
     role: 'Crane Operator',
     sector: 'construction',
     skills: ['Welding', 'Scaffolding', 'Safety Protocols'],
-    joinedDate: '2024-01-08'
+    joinedDate: '2024-01-08',
+    status: 'active'
   },
   // Hospital Workers
   {
     id: 'WRK-H201',
+    username: 'priya',
+    password: 'password123',
     name: 'Priya Manoharan',
     role: 'Sanitation Staff',
     sector: 'hospital',
     skills: ['Waste Disposal', 'Sanitation Protocols', 'Chemical Handling'],
-    joinedDate: '2024-02-12'
+    joinedDate: '2024-02-12',
+    status: 'active'
   },
   {
     id: 'WRK-H202',
+    username: 'deepa',
+    password: 'password123',
     name: 'Deepa Shankaran',
     role: 'Ward Boy',
     sector: 'hospital',
     skills: ['Patient Care Support', 'Sanitation Protocols', 'First Aid'],
-    joinedDate: '2024-05-18'
+    joinedDate: '2024-05-18',
+    status: 'active'
   },
   {
     id: 'WRK-H203',
+    username: 'anitha',
+    password: 'password123',
     name: 'Anitha Ravi',
     role: 'Nurse',
     sector: 'hospital',
     skills: ['Patient Care Support', 'First Aid', 'Sanitation Protocols'],
-    joinedDate: '2023-09-01'
+    joinedDate: '2023-09-01',
+    status: 'active'
   },
   {
     id: 'WRK-H204',
+    username: 'suresh',
+    password: 'password123',
     name: 'Suresh Babu',
     role: 'Security',
     sector: 'hospital',
     skills: ['First Aid', 'Safety Protocols', 'Sanitation Protocols'],
-    joinedDate: '2024-07-05'
+    joinedDate: '2024-07-05',
+    status: 'active'
   },
   {
     id: 'WRK-H205',
+    username: 'meena',
+    password: 'password123',
     name: 'Meena Kumari',
     role: 'Kitchen Staff',
     sector: 'hospital',
     skills: ['Sanitation Protocols', 'Waste Disposal', 'First Aid'],
-    joinedDate: '2024-08-14'
+    joinedDate: '2024-08-14',
+    status: 'active'
+  }
+];
+
+// Seed Pending Registration Requests for Admin Approval
+const initialRegistrationRequests = [
+  {
+    id: 'REQ-101',
+    name: 'Kavitha Sundaram',
+    username: 'kavitha',
+    password: 'password123',
+    sector: 'hospital',
+    role: 'Nurse',
+    skills: ['Patient Care Support', 'First Aid', 'Sanitation Protocols'],
+    requestedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    status: 'pending'
+  },
+  {
+    id: 'REQ-102',
+    name: 'Saravanan Perumal',
+    username: 'saravanan',
+    password: 'password123',
+    sector: 'construction',
+    role: 'Mason',
+    skills: ['Bricklaying', 'Scaffolding', 'Safety Protocols'],
+    requestedAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+    status: 'pending'
   }
 ];
 
@@ -302,13 +360,33 @@ const initialHazards = [
 
 // Active in-memory state
 let workers = JSON.parse(JSON.stringify(initialWorkers));
+let registrationRequests = JSON.parse(JSON.stringify(initialRegistrationRequests));
 let payRecords = JSON.parse(JSON.stringify(initialPayRecords));
 let hazards = JSON.parse(JSON.stringify(initialHazards));
 
 function resetStore() {
   workers = JSON.parse(JSON.stringify(initialWorkers));
+  registrationRequests = JSON.parse(JSON.stringify(initialRegistrationRequests));
   payRecords = JSON.parse(JSON.stringify(initialPayRecords));
   hazards = JSON.parse(JSON.stringify(initialHazards));
+}
+
+// Generate unique Employee ID based on sector
+function generateEmployeeId(sector) {
+  const sec = String(sector || 'construction').toLowerCase();
+  const prefix = sec === 'hospital' ? 'WRK-H' : 'WRK-C';
+  const startNum = sec === 'hospital' ? 200 : 100;
+
+  // Find max existing number with this prefix
+  const existingNums = workers
+    .filter(w => w.id && w.id.startsWith(prefix))
+    .map(w => {
+      const match = w.id.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : startNum;
+    });
+
+  const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : startNum + 1;
+  return `${prefix}${nextNum}`;
 }
 
 // Worker operations
@@ -324,13 +402,133 @@ function getWorkerById(workerId) {
   return workers.find(w => w.id.toUpperCase() === idNorm) || null;
 }
 
+function findWorkerByIdOrUsername(identifier) {
+  if (!identifier) return null;
+  const norm = String(identifier).trim().toLowerCase();
+  return workers.find(w =>
+    (w.id && w.id.toLowerCase() === norm) ||
+    (w.username && w.username.toLowerCase() === norm)
+  ) || null;
+}
+
 function updateWorkerSkills(workerId, skills) {
-  const worker = getWorkerById(workerId);
+  const worker = getWorkerById(workerId) || findWorkerByIdOrUsername(workerId);
   if (!worker) return null;
   if (Array.isArray(skills)) {
     worker.skills = [...new Set(skills)];
   }
   return worker;
+}
+
+// Worker Authentication (Username or Employee ID + Password)
+function authenticateWorker(identifier, password) {
+  if (!identifier || !password) return null;
+  const worker = findWorkerByIdOrUsername(identifier);
+  if (!worker) return null;
+
+  // Validate password
+  if (worker.password && worker.password !== password) {
+    return null;
+  }
+  return worker;
+}
+
+// Registration Requests (Self-Registration by Worker)
+function getRegistrationRequests() {
+  return registrationRequests.filter(r => r.status === 'pending');
+}
+
+function addRegistrationRequest({ name, username, password, sector, role, skills }) {
+  const uname = String(username || '').trim().toLowerCase();
+  if (!uname) throw new Error('Username is required');
+
+  // Check if username already exists in active workers or pending requests
+  if (findWorkerByIdOrUsername(uname)) {
+    throw new Error(`Username "${uname}" is already taken`);
+  }
+  if (registrationRequests.some(r => r.username.toLowerCase() === uname && r.status === 'pending')) {
+    throw new Error(`A pending registration with username "${uname}" already exists`);
+  }
+
+  const reqId = `REQ-${Date.now().toString().slice(-4)}`;
+  const request = {
+    id: reqId,
+    name: String(name || '').trim(),
+    username: uname,
+    password: String(password || 'password123'),
+    sector: sector ? String(sector).toLowerCase() : 'construction',
+    role: String(role || 'Labourer').trim(),
+    skills: Array.isArray(skills) ? skills : ['Safety Protocols'],
+    requestedAt: new Date().toISOString(),
+    status: 'pending'
+  };
+
+  registrationRequests.unshift(request);
+  return request;
+}
+
+function approveRegistrationRequest(requestId) {
+  const req = registrationRequests.find(r => r.id === requestId && r.status === 'pending');
+  if (!req) return null;
+
+  req.status = 'approved';
+  req.approvedAt = new Date().toISOString();
+
+  const newId = generateEmployeeId(req.sector);
+  const newWorker = {
+    id: newId,
+    username: req.username,
+    password: req.password,
+    name: req.name,
+    role: req.role,
+    sector: req.sector,
+    skills: req.skills || ['Safety Protocols'],
+    joinedDate: new Date().toISOString().split('T')[0],
+    status: 'active'
+  };
+
+  workers.push(newWorker);
+  return newWorker;
+}
+
+function rejectRegistrationRequest(requestId, reason) {
+  const req = registrationRequests.find(r => r.id === requestId && r.status === 'pending');
+  if (!req) return null;
+  req.status = 'rejected';
+  req.rejectedReason = reason || 'Declined by Administrator';
+  req.rejectedAt = new Date().toISOString();
+  return req;
+}
+
+// Admin directly creates employee in any sector
+function adminCreateWorker({ name, username, password, sector, role, skills }) {
+  if (!name || !String(name).trim()) throw new Error('Employee name is required');
+  const sec = sector ? String(sector).toLowerCase() : 'construction';
+  let uname = String(username || '').trim().toLowerCase();
+
+  if (!uname) {
+    uname = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(10 + Math.random() * 90);
+  }
+
+  if (findWorkerByIdOrUsername(uname)) {
+    throw new Error(`Username "${uname}" already exists. Please choose a different username.`);
+  }
+
+  const newId = generateEmployeeId(sec);
+  const newWorker = {
+    id: newId,
+    username: uname,
+    password: password || 'password123',
+    name: String(name).trim(),
+    role: role || (sec === 'hospital' ? 'Sanitation Staff' : 'Labourer'),
+    sector: sec,
+    skills: Array.isArray(skills) && skills.length > 0 ? skills : ['Safety Protocols'],
+    joinedDate: new Date().toISOString().split('T')[0],
+    status: 'active'
+  };
+
+  workers.push(newWorker);
+  return newWorker;
 }
 
 // Pay records operations
@@ -340,7 +538,6 @@ function getAllPayRecords(sector) {
     const s = String(sector).trim().toLowerCase();
     records = records.filter(r => r.sector.toLowerCase() === s);
   }
-  // Sort violations to top, then by date descending
   return records.sort((a, b) => {
     if (a.violation === b.violation) {
       return new Date(b.createdAt) - new Date(a.createdAt);
@@ -358,7 +555,7 @@ function getPayRecordsByWorker(workerId) {
 }
 
 function addPayRecord({ workerId, hours, actualPay, weekDate }) {
-  const worker = getWorkerById(workerId);
+  const worker = getWorkerById(workerId) || findWorkerByIdOrUsername(workerId);
   if (!worker) {
     throw new Error(`Worker with ID ${workerId} not found`);
   }
@@ -398,7 +595,6 @@ function respondToPayRecord(workerId, note, recordId) {
   if (recordId) {
     record = payRecords.find(r => r.id === recordId && r.workerId.toUpperCase() === idNorm);
   } else {
-    // Latest violation record for this worker
     record = payRecords.find(r => r.workerId.toUpperCase() === idNorm && r.violation);
     if (!record) {
       record = payRecords.find(r => r.workerId.toUpperCase() === idNorm);
@@ -418,7 +614,6 @@ function getAllHazards(sector) {
     const s = String(sector).trim().toLowerCase();
     list = list.filter(h => h.sector.toLowerCase() === s);
   }
-  // Sort by hours open descending (oldest created first among open ones)
   return list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
@@ -470,7 +665,7 @@ function updateHazardStatus(ticketId, status, notes) {
 
 // Passport Data Aggregator
 function getWorkerPassportData(workerId) {
-  const worker = getWorkerById(workerId);
+  const worker = getWorkerById(workerId) || findWorkerByIdOrUsername(workerId);
   if (!worker) return null;
 
   const workerPay = getPayRecordsByWorker(worker.id);
@@ -479,7 +674,6 @@ function getWorkerPassportData(workerId) {
   const violationsCount = workerPay.filter(p => p.violation).length;
   const cleanWeeksCount = totalWeeks - violationsCount;
 
-  // Timeline of work weeks
   const timeline = workerPay.map(p => ({
     id: p.id,
     weekDate: p.weekDate,
@@ -491,6 +685,7 @@ function getWorkerPassportData(workerId) {
 
   return {
     id: worker.id,
+    username: worker.username,
     name: worker.name,
     role: worker.role,
     sector: worker.sector,
@@ -511,7 +706,14 @@ module.exports = {
   resetStore,
   getAllWorkers,
   getWorkerById,
+  findWorkerByIdOrUsername,
+  authenticateWorker,
   updateWorkerSkills,
+  getRegistrationRequests,
+  addRegistrationRequest,
+  approveRegistrationRequest,
+  rejectRegistrationRequest,
+  adminCreateWorker,
   getAllPayRecords,
   getPayRecordsByWorker,
   addPayRecord,

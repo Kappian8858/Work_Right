@@ -20,6 +20,7 @@ const { requireAdminToken } = require('./middleware/auth');
 const payRouter = require('./routes/pay');
 const hazardsRouter = require('./routes/hazards');
 const passportRouter = require('./routes/passport');
+const authRouter = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -77,6 +78,7 @@ app.get('/api/admin/workforce', requireAdminToken, (req, res) => {
 });
 
 // Mount modular API routers
+app.use('/api', authRouter);
 app.use('/api/pay', payRouter);
 app.use('/api/hazards', hazardsRouter);
 app.use('/api/passport', passportRouter);

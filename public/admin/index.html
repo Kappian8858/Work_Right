@@ -2,10 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=/admin/pay.html">
-  <title>WorkRight Admin Redirect</title>
+  <title>WorkRight Admin</title>
+  <script>
+    if (localStorage.getItem('workright_admin_logged_in') === 'true') {
+      window.location.replace('/admin/pay.html');
+    } else {
+      window.location.replace('/admin/login.html');
+    }
+  </script>
 </head>
 <body>
-  <p>Redirecting to <a href="/admin/pay.html">Pay Compliance Dashboard</a>...</p>
+  <p>Loading Admin Portal...</p>
 </body>
 </html>

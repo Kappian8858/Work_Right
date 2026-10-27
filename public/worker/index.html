@@ -5,6 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WorkRight - Worker Portal</title>
   <link rel="stylesheet" href="/css/worker.css">
+  <style>
+    .auth-tab-group {
+      display: flex;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 20px;
+      gap: 8px;
+    }
+    .auth-tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      text-align: center;
+    }
+    .auth-tab-btn.active {
+      color: var(--primary);
+    }
+    .auth-tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--primary);
+      border-radius: 3px 3px 0 0;
+    }
+    .credential-chip {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #1e40af;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .notice-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #166534;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+  </style>
 </head>
 <body>
   <!-- Top App Header -->
@@ -21,61 +76,159 @@
     </nav>
   </header>
 
-  <!-- Worker Identity Bar -->
+  <!-- Worker Identity Bar (Visible when logged in) -->
   <aside id="workerBar" class="worker-identity-bar" style="display: none;" aria-label="Worker Profile">
     <div class="worker-chip">
       <span aria-hidden="true">👷</span>
       <span id="barWorkerGreeting">Hello Worker</span>
       <span id="barSectorTag" style="font-size: 11px; padding: 2px 6px; background: #dbeafe; border-radius: 4px;"></span>
     </div>
-    <a id="switchWorkerBtn" href="#" role="button" data-i18n="change_worker">Switch Worker</a>
+    <a id="switchWorkerBtn" href="#" role="button" onclick="handleLogout(event)">Log Out</a>
   </aside>
 
   <main class="container" role="main">
-    <!-- First Time Setup / Worker Selector Modal Card -->
-    <section id="loginCard" class="card" aria-labelledby="loginHeading">
-      <h1 id="loginHeading" class="page-title" data-i18n="home_title">WorkRight Worker Portal</h1>
+    <!-- AUTHENTICATION CARD (Tabs: Sign In vs Create Account) -->
+    <section id="authCard" class="card" aria-labelledby="authHeading">
+      <h1 id="authHeading" class="page-title" data-i18n="home_title">WorkRight Worker Portal</h1>
       <p class="page-subtitle" data-i18n="app_tagline">Dignity, Fair Wages & Safe Work for Every Worker</p>
 
-      <form id="loginForm" onsubmit="handleWorkerLogin(event)">
-        <div class="form-group">
-          <label for="workerIdInput" class="form-label" data-i18n="worker_id_label">Employee ID</label>
-          <input type="text" id="workerIdInput" class="form-input" placeholder="e.g. WRK-C101" required autocomplete="off" aria-required="true">
-        </div>
-
-        <div class="form-group">
-          <label for="sectorSelect" class="form-label" data-i18n="sector_label">Sector</label>
-          <select id="sectorSelect" class="form-select" required aria-required="true">
-            <option value="construction" data-i18n="sector_construction">Construction</option>
-            <option value="hospital" data-i18n="sector_hospital">Hospital</option>
-          </select>
-        </div>
-
-        <!-- 1-Click Demo Worker Chooser -->
-        <div class="form-group">
-          <label for="demoSelect" class="form-label" style="font-size: 13px; color: var(--text-muted);">Quick Demo Login (Select Sample Worker):</label>
-          <select id="demoSelect" class="form-select" onchange="applyDemoWorker(this.value)" aria-label="Sample Demo Worker">
-            <option value="">-- Choose Sample Profile --</option>
-            <option value="WRK-C101|construction|Ramu Selvam">WRK-C101: Ramu Selvam (Mason - Construction)</option>
-            <option value="WRK-C102|construction|Muthu Kumar">WRK-C102: Muthu Kumar (Plumber - Construction)</option>
-            <option value="WRK-H201|hospital|Priya Manoharan">WRK-H201: Priya Manoharan (Sanitation - Hospital)</option>
-            <option value="WRK-H202|hospital|Deepa Shankaran">WRK-H202: Deepa Shankaran (Ward Boy - Hospital)</option>
-          </select>
-        </div>
-
-        <button type="submit" class="btn-touch btn-primary" data-i18n="save_profile">
-          <span>Continue</span> <span>→</span>
+      <!-- Navigation Tabs -->
+      <div class="auth-tab-group" role="tablist">
+        <button type="button" id="tabLoginBtn" class="auth-tab-btn active" onclick="switchAuthTab('login')">
+          🔑 Sign In
         </button>
-      </form>
+        <button type="button" id="tabRegisterBtn" class="auth-tab-btn" onclick="switchAuthTab('register')">
+          📝 Create Account
+        </button>
+      </div>
+
+      <!-- TAB 1: WORKER LOGIN FORM -->
+      <div id="tabLoginForm">
+        <form id="workerLoginForm" onsubmit="handleWorkerLogin(event)">
+          <div class="form-group">
+            <label for="loginIdentifier" class="form-label">Username or Employee ID</label>
+            <input
+              type="text"
+              id="loginIdentifier"
+              class="form-input"
+              placeholder="e.g. ramu OR WRK-C101"
+              value="ramu"
+              required
+              autocomplete="username"
+            >
+            <small style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: block;">
+              Use your chosen username or assigned Employee ID
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="loginPassword" class="form-label">Password</label>
+            <input
+              type="password"
+              id="loginPassword"
+              class="form-input"
+              placeholder="e.g. password123"
+              value="password123"
+              required
+              autocomplete="current-password"
+            >
+          </div>
+
+          <!-- 1-Click Demo Profiles -->
+          <div class="form-group">
+            <label for="demoSelect" class="form-label" style="font-size: 13px; color: var(--text-muted);">
+              Quick Demo Accounts (Select to test):
+            </label>
+            <select id="demoSelect" class="form-select" onchange="applyDemoWorker(this.value)">
+              <option value="ramu|password123">WRK-C101: Ramu Selvam (Mason - Construction) - user: ramu</option>
+              <option value="muthu|password123">WRK-C102: Muthu Kumar (Plumber - Construction) - user: muthu</option>
+              <option value="priya|password123">WRK-H201: Priya Manoharan (Sanitation - Hospital) - user: priya</option>
+              <option value="anitha|password123">WRK-H203: Anitha Ravi (Nurse - Hospital) - user: anitha</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-touch btn-primary" id="btnWorkerSignIn">
+            <span>Sign In to Portal</span> <span>→</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 2: WORKER CREATE ACCOUNT (REGISTRATION REQUEST) -->
+      <div id="tabRegisterForm" style="display: none;">
+        <form id="workerRegisterForm" onsubmit="handleWorkerRegister(event)">
+          <div class="form-group">
+            <label for="regName" class="form-label">Full Name</label>
+            <input type="text" id="regName" class="form-input" placeholder="e.g. Murugan K" required autocomplete="name">
+          </div>
+
+          <div class="form-group">
+            <label for="regUsername" class="form-label">Desired Username</label>
+            <input type="text" id="regUsername" class="form-input" placeholder="e.g. murugan" required autocomplete="username">
+            <small style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 4px;">
+              You will use this username to log in for the first time
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="regPassword" class="form-label">Password</label>
+            <input type="password" id="regPassword" class="form-input" placeholder="Minimum 4 characters" value="password123" required autocomplete="new-password">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label for="regSector" class="form-label">Sector</label>
+              <select id="regSector" class="form-select" onchange="updateRegisterRoleOptions(this.value)" required>
+                <option value="construction">Construction 🏗️</option>
+                <option value="hospital">Hospital 🏥</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="regRole" class="form-label">Trade / Role</label>
+              <select id="regRole" class="form-select" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 13px;">Skills You Perform:</label>
+            <div id="regSkillsContainer" style="display: grid; grid-template-columns: 1fr; gap: 6px;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <button type="submit" class="btn-touch btn-primary" id="btnSubmitRegistration">
+            <span>Submit Registration Request</span> <span>→</span>
+          </button>
+        </form>
+
+        <div id="registrationNotice" class="notice-box" style="display: none; margin-top: 16px;">
+          <strong>✅ Registration Request Submitted!</strong><br>
+          Your account request has been sent to the employer admin. Once the admin accepts your request, your official Employee ID will be generated and you can sign in with your username!
+        </div>
+      </div>
     </section>
 
-    <!-- Worker Action Dashboard (Max 3 Primary Actions Visible at Once) -->
+    <!-- WORKER LOGGED IN DASHBOARD (Max 3 Primary Actions) -->
     <section id="dashboardSection" style="display: none;" aria-label="Worker Dashboard">
-      <div style="margin-bottom: 20px;">
+      <div style="margin-bottom: 16px;">
         <h1 class="page-title">
           <span data-i18n="greeting">Hello</span>, <span id="workerGreetingName">Worker</span>!
         </h1>
         <p class="page-subtitle" id="workerRoleSubtitle">Construction Sector</p>
+      </div>
+
+      <!-- Identity & Employee ID Chip -->
+      <div class="credential-chip">
+        <div>
+          <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); display: block;">Official Employee ID</span>
+          <strong id="chipWorkerId" style="font-size: 16px; color: #1d4ed8;">WRK-C101</strong>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); display: block;">Username</span>
+          <code id="chipUsername" style="font-size: 14px; font-weight: 700;">ramu</code>
+        </div>
       </div>
 
       <!-- Action 1: Check My Pay -->
@@ -96,9 +249,12 @@
         <span data-i18n="passport_button">My Skill Passport</span>
       </a>
     </section>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="status"></div>
   </main>
 
-  <!-- Bottom Navigation Bar (Three Icons: Pay / Hazard / Passport) -->
+  <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" aria-label="Bottom Navigation">
     <a href="/worker/pay.html" class="nav-item" aria-label="Pay Checker">
       <span class="nav-icon" aria-hidden="true">💰</span>
@@ -117,78 +273,178 @@
   <!-- Scripts -->
   <script src="/js/i18n.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    let sectorsConfig = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSectors();
       I18N.init(() => {
-        checkStoredWorker();
+        checkStoredWorkerSession();
       });
+      updateRegisterRoleOptions('construction');
     });
 
-    function checkStoredWorker() {
-      const workerId = localStorage.getItem('workright_worker_id');
-      const sector = localStorage.getItem('workright_worker_sector');
-      const workerName = localStorage.getItem('workright_worker_name');
-
-      if (workerId && sector) {
-        showDashboard(workerId, sector, workerName);
-      } else {
-        showLogin();
+    async function loadSectors() {
+      try {
+        const res = await fetch('/api/sectors');
+        sectorsConfig = await res.json();
+      } catch (e) {
+        console.warn('Could not load sector config', e);
       }
     }
 
-    function showDashboard(workerId, sector, workerName) {
-      document.getElementById('loginCard').style.display = 'none';
+    function switchAuthTab(tab) {
+      if (tab === 'login') {
+        document.getElementById('tabLoginForm').style.display = 'block';
+        document.getElementById('tabRegisterForm').style.display = 'none';
+        document.getElementById('tabLoginBtn').classList.add('active');
+        document.getElementById('tabRegisterBtn').classList.remove('active');
+      } else {
+        document.getElementById('tabLoginForm').style.display = 'none';
+        document.getElementById('tabRegisterForm').style.display = 'block';
+        document.getElementById('tabLoginBtn').classList.remove('active');
+        document.getElementById('tabRegisterBtn').classList.add('active');
+      }
+    }
+
+    function updateRegisterRoleOptions(sec) {
+      if (!sectorsConfig) return;
+      const conf = sectorsConfig[sec] || sectorsConfig['construction'];
+
+      const roleSelect = document.getElementById('regRole');
+      roleSelect.innerHTML = (conf.roles || []).map(r => `<option value="${r}">${r}</option>`).join('');
+
+      const skillsContainer = document.getElementById('regSkillsContainer');
+      skillsContainer.innerHTML = (conf.skills || []).map(s => `
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; cursor: pointer;">
+          <input type="checkbox" name="regSkills" value="${s}" checked>
+          <span>${s}</span>
+        </label>
+      `).join('');
+    }
+
+    function checkStoredWorkerSession() {
+      const workerId = localStorage.getItem('workright_worker_id');
+      const workerName = localStorage.getItem('workright_worker_name');
+      const sector = localStorage.getItem('workright_worker_sector');
+      const username = localStorage.getItem('workright_worker_username');
+
+      if (workerId && sector) {
+        showDashboard({ id: workerId, name: workerName, sector: sector, username: username });
+      } else {
+        showAuth();
+      }
+    }
+
+    function showDashboard(worker) {
+      document.getElementById('authCard').style.display = 'none';
       document.getElementById('dashboardSection').style.display = 'block';
       document.getElementById('workerBar').style.display = 'flex';
 
-      document.getElementById('workerGreetingName').textContent = workerName || workerId;
-      document.getElementById('barWorkerGreeting').textContent = workerName || workerId;
-      document.getElementById('barSectorTag').textContent = sector.toUpperCase();
-      document.getElementById('workerRoleSubtitle').textContent = `${sector.charAt(0).toUpperCase() + sector.slice(1)} Sector • ${workerId}`;
+      document.getElementById('workerGreetingName').textContent = worker.name || worker.id;
+      document.getElementById('barWorkerGreeting').textContent = worker.name || worker.id;
+      document.getElementById('barSectorTag').textContent = (worker.sector || 'construction').toUpperCase();
+      document.getElementById('workerRoleSubtitle').textContent = `${(worker.sector || '').toUpperCase()} Sector • ID: ${worker.id}`;
+
+      document.getElementById('chipWorkerId').textContent = worker.id;
+      document.getElementById('chipUsername').textContent = worker.username || worker.id.toLowerCase();
     }
 
-    function showLogin() {
-      document.getElementById('loginCard').style.display = 'block';
+    function showAuth() {
+      document.getElementById('authCard').style.display = 'block';
       document.getElementById('dashboardSection').style.display = 'none';
       document.getElementById('workerBar').style.display = 'none';
     }
 
     function applyDemoWorker(val) {
       if (!val) return;
-      const [id, sector, name] = val.split('|');
-      document.getElementById('workerIdInput').value = id;
-      document.getElementById('sectorSelect').value = sector;
+      const [user, pwd] = val.split('|');
+      document.getElementById('loginIdentifier').value = user;
+      document.getElementById('loginPassword').value = pwd;
     }
 
     async function handleWorkerLogin(e) {
       e.preventDefault();
-      const workerId = document.getElementById('workerIdInput').value.trim().toUpperCase();
-      const sector = document.getElementById('sectorSelect').value;
+      const identifier = document.getElementById('loginIdentifier').value.trim();
+      const password = document.getElementById('loginPassword').value;
 
-      let workerName = workerId;
       try {
-        const res = await fetch(`/api/passport/${workerId}`);
-        if (res.ok) {
-          const data = await res.json();
-          workerName = data.name || workerId;
+        const res = await fetch('/api/auth/worker/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Authentication failed');
         }
+
+        const worker = data.worker;
+        localStorage.setItem('workright_worker_id', worker.id);
+        localStorage.setItem('workright_worker_name', worker.name);
+        localStorage.setItem('workright_worker_sector', worker.sector);
+        localStorage.setItem('workright_worker_username', worker.username || worker.id.toLowerCase());
+
+        showDashboard(worker);
+        showToast(`Welcome back, ${worker.name}!`);
       } catch (err) {
-        console.warn('Could not verify worker online, using input ID');
+        alert(err.message);
       }
-
-      localStorage.setItem('workright_worker_id', workerId);
-      localStorage.setItem('workright_worker_sector', sector);
-      localStorage.setItem('workright_worker_name', workerName);
-
-      showDashboard(workerId, sector, workerName);
     }
 
-    document.getElementById('switchWorkerBtn').addEventListener('click', (e) => {
+    async function handleWorkerRegister(e) {
       e.preventDefault();
+      const name = document.getElementById('regName').value.trim();
+      const username = document.getElementById('regUsername').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const sector = document.getElementById('regSector').value;
+      const role = document.getElementById('regRole').value;
+
+      const checkedSkills = Array.from(document.querySelectorAll('input[name="regSkills"]:checked')).map(cb => cb.value);
+
+      try {
+        const res = await fetch('/api/auth/worker/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            username,
+            password,
+            sector,
+            role,
+            skills: checkedSkills
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Registration failed');
+        }
+
+        const notice = document.getElementById('registrationNotice');
+        notice.style.display = 'block';
+        notice.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('workerRegisterForm').reset();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function handleLogout(e) {
+      if (e) e.preventDefault();
       localStorage.removeItem('workright_worker_id');
-      localStorage.removeItem('workright_worker_sector');
       localStorage.removeItem('workright_worker_name');
-      showLogin();
-    });
+      localStorage.removeItem('workright_worker_sector');
+      localStorage.removeItem('workright_worker_username');
+      showAuth();
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
   </script>
 </body>
 </html>
