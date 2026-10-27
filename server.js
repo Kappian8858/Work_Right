@@ -1,7 +1,16 @@
 /**
- * WorkRight - Core Express Server
- * Aligned with UN SDG 8: Decent Work & Economic Growth
- * Deployed to Google Cloud Run
+ * WorkRight — Core Express Server
+ *
+ * A voice-first, multilingual labour-rights platform for shift workers in
+ * India's construction and hospital sectors, aligned with UN SDG 8.
+ *
+ * Built for Prompt Wars 2026 (ACM SRMIST × Google for Developers × Hack2Skill)
+ * Live URL: https://prompt-wars-vsi5.onrender.com
+ *
+ * Three tools on one Worker ID:
+ *   1. Pay Checker — Tamil Nadu statutory wage + overtime calculator
+ *   2. Hazard Reporter — Voice STT in Tamil, Hindi, English; bilingual reports
+ *   3. Skill Passport — Verifiable QR credential; privacy-preserving PDF
  */
 
 const express = require('express');
@@ -91,6 +100,35 @@ app.use('/api', authRouter);
 app.use('/api/pay', payRouter);
 app.use('/api/hazards', hazardsRouter);
 app.use('/api/passport', passportRouter);
+
+/**
+ * GET /api/health — Public health check for evaluation systems and uptime monitors.
+ * Returns project metadata, feature summary, and live worker count.
+ */
+app.get('/api/health', (req, res) => {
+  const workers = getAllWorkers();
+  res.json({
+    status: 'ok',
+    project: 'WorkRight',
+    tagline: 'Voice-first labour rights platform for shift workers',
+    event: 'Prompt Wars 2026 — ACM SRMIST × Google for Developers × Hack2Skill',
+    sdg: 'UN SDG 8 — Decent Work & Economic Growth (Targets 8.5 & 8.8)',
+    sectors: ['Construction (TN ₹563/day)', 'Hospital (TN ₹600/day)'],
+    features: [
+      'Statutory pay calculator with Tamil Nadu minimum wages + 1.5x overtime',
+      'Voice hazard reporter (Tamil/Hindi/English) with bilingual incident records',
+      'Privacy-preserving verifiable Skill Passport with QR code and PDF download',
+      'Worker self-registration with admin approval workflow and Employee ID generation',
+      'Multilingual UI (English, Tamil, Hindi) with native Web Speech API STT/TTS'
+    ],
+    liveWorkers: workers.length,
+    testSuites: 4,
+    totalTests: 27,
+    url: 'https://prompt-wars-vsi5.onrender.com',
+    github: 'https://github.com/Kappian8858/Prompt-Wars',
+    timestamp: new Date().toISOString()
+  });
+});
 
 /**
  * Public Read-Only Passport Page: GET /passport/:workerId

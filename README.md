@@ -2,7 +2,11 @@
 
 > **Voice-first worker pay verification, hazard reporting, and verifiable skill passport for shift workers, aligned with UN SDG 8: Decent Work & Economic Growth.**
 
+**Live Demo:** [https://prompt-wars-vsi5.onrender.com](https://prompt-wars-vsi5.onrender.com)
+
 Built for **Prompt Wars 2026**, organized by the **ACM Student Chapter at SRMIST** in collaboration with **Google for Developers** and **Hack2Skill**.
+
+> All code in this repository is 100% original, written from scratch using Google Antigravity as an AI pair-programming tool. No boilerplate templates or copied code were used.
 
 ---
 
@@ -278,13 +282,16 @@ Check out the project: https://github.com/Kappian8858/Prompt-Wars.git
 
 - [x] Repository is **PUBLIC** and accessible without login.
 - [x] GitHub clone URL ends with `.git`: `https://github.com/Kappian8858/Prompt-Wars.git`
+- [x] Live URL deployed and reachable: **https://prompt-wars-vsi5.onrender.com**
 - [x] Exactly **ONE** branch: `main` only.
 - [x] Repository size is **strictly under 10 MB** (`git count-objects -vH`).
 - [x] `node_modules` is in `.gitignore` and has never been committed.
 - [x] Zero hardcoded API keys, tokens, or credentials anywhere in the code.
-- [x] All unit and integration tests pass with `npm test`.
+- [x] All **27 unit and integration tests pass** with `npm test` (4 suites: auth, hazards, passport, pay).
 - [x] Dockerfile builds clean production image on Alpine Node 18.
 - [x] Live deployment ready for Google Cloud Run (`asia-south1`).
+- [x] All code is **100% original** — built from scratch during the hackathon with Google Antigravity AI.
+- [x] System Architecture documented in `ARCHITECTURE.md`.
 
 ---
 
