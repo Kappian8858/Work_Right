@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { calculateExpectedPay, checkViolation } = require('../logic/payCalculator');
+const { validateHours, validatePay, normalizeSector } = require('../logic/validator');
 const {
   getWorkerById,
   getAllPayRecords,
@@ -23,12 +24,14 @@ router.post('/check', (req, res) => {
   try {
     const { workerId, hours, actualPay, sector } = req.body;
 
-    if (hours === undefined || hours === null || isNaN(Number(hours))) {
-      return res.status(400).json({ error: 'Hours worked must be a valid number' });
+    const hoursVal = validateHours(hours);
+    if (!hoursVal.valid) {
+      return res.status(400).json({ error: hoursVal.error });
     }
 
-    if (actualPay === undefined || actualPay === null || isNaN(Number(actualPay))) {
-      return res.status(400).json({ error: 'Actual pay received must be a valid number' });
+    const payVal = validatePay(actualPay);
+    if (!payVal.valid) {
+      return res.status(400).json({ error: payVal.error });
     }
 
     // Determine sector: from request body, or from worker profile, or default
@@ -87,12 +90,14 @@ router.post('/log', (req, res) => {
       return res.status(400).json({ error: 'Worker ID is required' });
     }
 
-    if (hours === undefined || isNaN(Number(hours))) {
-      return res.status(400).json({ error: 'Hours worked is required and must be numeric' });
+    const hoursVal = validateHours(hours);
+    if (!hoursVal.valid) {
+      return res.status(400).json({ error: hoursVal.error });
     }
 
-    if (actualPay === undefined || isNaN(Number(actualPay))) {
-      return res.status(400).json({ error: 'Actual pay is required and must be numeric' });
+    const payVal = validatePay(actualPay);
+    if (!payVal.valid) {
+      return res.status(400).json({ error: payVal.error });
     }
 
     const worker = getWorkerById(workerId);
@@ -102,8 +107,8 @@ router.post('/log', (req, res) => {
 
     const record = addPayRecord({
       workerId: worker.id,
-      hours,
-      actualPay,
+      hours: hoursVal.value,
+      actualPay: payVal.value,
       weekDate
     });
 

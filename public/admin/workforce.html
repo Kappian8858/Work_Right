@@ -58,6 +58,7 @@
   </style>
 </head>
 <body>
+  <a href="#main" class="skip-link">Skip to main content</a>
   <!-- Auth Check -->
   <script>
     if (localStorage.getItem('workright_admin_logged_in') !== 'true') {
@@ -103,7 +104,7 @@
   </aside>
 
   <!-- Main Content Area -->
-  <main class="admin-main" role="main">
+  <main id="main" class="admin-main" role="main">
     <!-- Topbar -->
     <header class="admin-topbar">
       <div>
@@ -472,21 +473,25 @@
       }).join('');
     }
 
+    let filterDebounceTimer = null;
     function filterWorkers(query) {
-      if (!query || !query.trim()) {
-        renderWorkforceTable(allWorkers);
-        return;
-      }
-      const q = query.trim().toLowerCase();
-      const filtered = allWorkers.filter(w => {
-        const roleMatch = (w.role || '').toLowerCase().includes(q);
-        const nameMatch = (w.name || '').toLowerCase().includes(q);
-        const idMatch = (w.id || '').toLowerCase().includes(q);
-        const usernameMatch = (w.username || '').toLowerCase().includes(q);
-        const skillMatch = (w.skills || []).some(s => s.toLowerCase().includes(q));
-        return roleMatch || nameMatch || idMatch || usernameMatch || skillMatch;
-      });
-      renderWorkforceTable(filtered);
+      if (filterDebounceTimer) clearTimeout(filterDebounceTimer);
+      filterDebounceTimer = setTimeout(() => {
+        if (!query || !query.trim()) {
+          renderWorkforceTable(allWorkers);
+          return;
+        }
+        const q = query.trim().toLowerCase();
+        const filtered = allWorkers.filter(w => {
+          const roleMatch = (w.role || '').toLowerCase().includes(q);
+          const nameMatch = (w.name || '').toLowerCase().includes(q);
+          const idMatch = (w.id || '').toLowerCase().includes(q);
+          const usernameMatch = (w.username || '').toLowerCase().includes(q);
+          const skillMatch = (w.skills || []).some(s => s.toLowerCase().includes(q));
+          return roleMatch || nameMatch || idMatch || usernameMatch || skillMatch;
+        });
+        renderWorkforceTable(filtered);
+      }, 150);
     }
 
     // Pending Registration Requests

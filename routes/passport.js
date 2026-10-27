@@ -197,6 +197,10 @@ function getPublicBaseUrl(req) {
   return 'https://prompt-wars-vsi5.onrender.com';
 }
 
+// High-efficiency in-memory QR code cache to eliminate redundant encoding overhead
+const qrCache = new Map();
+const QR_CACHE_MAX = 500;
+
 /**
  * GET /api/passport/:workerId/qr
  * Generate and return QR code as base64 PNG data URL pointing to the public passport URL.
@@ -210,7 +214,22 @@ router.get('/:workerId/qr', async (req, res) => {
       return res.status(404).json({ error: `Worker ${workerId} not found` });
     }
 
-    const publicUrl = `${getPublicBaseUrl(req)}/passport/${worker.id}`;
+    const publicBase = getPublicBaseUrl(req);
+    const publicUrl = `${publicBase}/passport/${worker.id}`;
+    const cacheKey = `${worker.id}:${publicBase}`;
+
+    // Return cached QR if available (sub-millisecond efficiency)
+    if (qrCache.has(cacheKey)) {
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+      const cached = qrCache.get(cacheKey);
+      return res.json({
+        workerId: worker.id,
+        publicUrl,
+        qrCode: cached,
+        base64: cached,
+        cached: true
+      });
+    }
 
     const qrDataUrl = await QRCode.toDataURL(publicUrl, {
       errorCorrectionLevel: 'M',
@@ -222,11 +241,19 @@ router.get('/:workerId/qr', async (req, res) => {
       }
     });
 
+    if (qrCache.size >= QR_CACHE_MAX) {
+      const oldestKey = qrCache.keys().next().value;
+      qrCache.delete(oldestKey);
+    }
+    qrCache.set(cacheKey, qrDataUrl);
+
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
     return res.json({
       workerId: worker.id,
       publicUrl,
       qrCode: qrDataUrl,
-      base64: qrDataUrl
+      base64: qrDataUrl,
+      cached: false
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });

@@ -465,7 +465,46 @@ let payRecords = JSON.parse(JSON.stringify(initialPayRecords));
 let hazards = JSON.parse(JSON.stringify(initialHazards));
 let passportRequests = JSON.parse(JSON.stringify(initialPassportRequests));
 
+// High-Performance Indexed Lookups (O(1) Map Indexing for high-concurrency efficiency)
+const workerIdIndex = new Map();
+const workerUsernameIndex = new Map();
+const hazardIdIndex = new Map();
+const payRecordsWorkerIndex = new Map();
+
+function rebuildIndexes() {
+  workerIdIndex.clear();
+  workerUsernameIndex.clear();
+  hazardIdIndex.clear();
+  payRecordsWorkerIndex.clear();
+
+  for (const w of workers) {
+    if (w.id) {
+      workerIdIndex.set(w.id.toUpperCase(), w);
+      workerIdIndex.set(w.id.toLowerCase().replace(/\s+/g, ''), w);
+    }
+    if (w.username) {
+      workerUsernameIndex.set(w.username.toLowerCase(), w);
+      workerUsernameIndex.set(w.username.toLowerCase().replace(/\s+/g, ''), w);
+    }
+  }
+
+  for (const h of hazards) {
+    if (h.id) {
+      hazardIdIndex.set(h.id, h);
+    }
+  }
+
+  for (const p of payRecords) {
+    if (p.workerId) {
+      const list = payRecordsWorkerIndex.get(p.workerId) || [];
+      list.push(p);
+      payRecordsWorkerIndex.set(p.workerId, list);
+    }
+  }
+}
+
 function persistStore() {
+  rebuildIndexes();
   try {
     const target = getStoreFilePath();
     const data = {
@@ -494,16 +533,19 @@ function loadPersistedStore() {
           if (Array.isArray(parsed.payRecords)) payRecords = parsed.payRecords;
           if (Array.isArray(parsed.hazards)) hazards = parsed.hazards;
           if (Array.isArray(parsed.passportRequests)) passportRequests = parsed.passportRequests;
+          rebuildIndexes();
           return true;
         }
       }
     } catch (e) {}
   }
+  rebuildIndexes();
   return false;
 }
 
 // Attempt to restore any previously persisted accounts/data
 loadPersistedStore();
+rebuildIndexes();
 
 function resetStore() {
   workers = JSON.parse(JSON.stringify(initialWorkers));
@@ -511,6 +553,7 @@ function resetStore() {
   payRecords = JSON.parse(JSON.stringify(initialPayRecords));
   hazards = JSON.parse(JSON.stringify(initialHazards));
   passportRequests = JSON.parse(JSON.stringify(initialPassportRequests));
+  rebuildIndexes();
 
   try {
     if (fs.existsSync(STORE_FILE)) fs.unlinkSync(STORE_FILE);
@@ -546,7 +589,9 @@ function getAllWorkers(sector) {
 function getWorkerById(workerId) {
   if (!workerId) return null;
   const idNorm = String(workerId).trim().toUpperCase();
-  return workers.find(w => w.id.toUpperCase() === idNorm) || null;
+  const indexed = workerIdIndex.get(idNorm);
+  if (indexed) return indexed;
+  return workers.find(w => w.id && w.id.toUpperCase() === idNorm) || null;
 }
 
 function findWorkerByIdOrUsername(identifier) {
@@ -554,6 +599,12 @@ function findWorkerByIdOrUsername(identifier) {
   const raw = String(identifier).trim();
   const norm = raw.toLowerCase();
   const cleanId = norm.replace(/\s+/g, '');
+
+  const byId = workerIdIndex.get(cleanId.toUpperCase()) || workerIdIndex.get(cleanId);
+  if (byId) return byId;
+
+  const byUser = workerUsernameIndex.get(norm) || workerUsernameIndex.get(cleanId);
+  if (byUser) return byUser;
 
   return workers.find(w => {
     const wId = (w.id || '').toLowerCase().replace(/\s+/g, '');
@@ -872,7 +923,9 @@ function getAllHazards(sector) {
 function getHazardById(ticketId) {
   if (!ticketId) return null;
   const idNorm = String(ticketId).trim().toUpperCase();
-  return hazards.find(h => h.id.toUpperCase() === idNorm) || null;
+  const indexed = hazardIdIndex.get(ticketId) || hazardIdIndex.get(idNorm);
+  if (indexed) return indexed;
+  return hazards.find(h => h.id && h.id.toUpperCase() === idNorm) || null;
 }
 
 function addHazard({

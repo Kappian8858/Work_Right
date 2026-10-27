@@ -15,6 +15,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 
@@ -25,6 +26,7 @@ const {
   getWorkerPassportData
 } = require('./data/seed');
 const { requireAdminToken } = require('./middleware/auth');
+const { securityHeaders, rateLimiter } = require('./middleware/security');
 
 const payRouter = require('./routes/pay');
 const hazardsRouter = require('./routes/hazards');
@@ -37,20 +39,34 @@ const PORT = process.env.PORT || 8080;
 // Trust reverse proxy for HTTPS headers on Render and Vercel
 app.set('trust proxy', 1);
 
+// Security Hardening Headers & Fingerprint Removal
+app.use(securityHeaders);
+
+// High-Efficiency Response Compression (Gzip / Deflate for responses > 1KB)
+app.use(compression({ threshold: 1024 }));
+
 // Middleware
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-Admin-Token', 'Authorization']
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '512kb' }));
+app.use(express.urlencoded({ extended: true, limit: '512kb' }));
 
-// Serve static frontend assets
-app.use(express.static(path.join(__dirname, 'public')));
+// Apply rate limiting to all /api routes to prevent brute-force & DoS
+app.use('/api', rateLimiter);
 
-// Translation endpoint
+// Serve static frontend assets with HTTP caching and ETag support
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true
+}));
+
+// Translation endpoint with caching headers
 app.get('/api/translations/:lang', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
   const lang = req.params.lang || 'en';
   const filePath = path.join(__dirname, 'translations', `${lang}.json`);
   if (fs.existsSync(filePath)) {
@@ -59,13 +75,15 @@ app.get('/api/translations/:lang', (req, res) => {
   return res.sendFile(path.join(__dirname, 'translations', 'en.json'));
 });
 
-// Sector configurations endpoint
+// Sector configurations endpoint with caching headers
 app.get('/api/sectors', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
   res.json(sectors);
 });
 
 // Demo workers endpoint (for worker portal login selector)
 app.get('/api/demo-workers', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
   const list = getAllWorkers().map(w => ({
     id: w.id,
     name: w.name,
@@ -121,8 +139,8 @@ app.get('/api/health', (req, res) => {
       'Multilingual UI (English, Tamil, Hindi) with native Web Speech API STT/TTS'
     ],
     liveWorkers: workers.length,
-    testSuites: 4,
-    totalTests: 27,
+    testSuites: 5,
+    totalTests: 41,
     url: 'https://prompt-wars-vsi5.onrender.com',
     github: 'https://github.com/Kappian8858/Prompt-Wars',
     timestamp: new Date().toISOString()
@@ -389,6 +407,26 @@ app.get('/admin', (req, res) => {
 // Worker fallback
 app.get('/worker', (req, res) => {
   res.redirect('/worker/index.html');
+});
+
+// API 404 Handler - returns standard JSON for unknown API paths
+app.all('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `API route ${req.method} ${req.path} not found`
+  });
+});
+
+// Centralized Global Error Handler Middleware
+app.use((err, req, res, next) => {
+  const statusCode = err.status || err.statusCode || 500;
+  console.error(`[WorkRight Server Error] ${req.method} ${req.url}:`, err.message || err);
+
+  res.status(statusCode).json({
+    success: false,
+    error: err.message || 'An internal server error occurred',
+    code: err.code || 'INTERNAL_SERVER_ERROR'
+  });
 });
 
 // Start listening if run directly

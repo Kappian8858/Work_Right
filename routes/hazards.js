@@ -13,6 +13,8 @@ const {
 } = require('../data/seed');
 const { requireAdminToken } = require('../middleware/auth');
 const { translateHazardDescription } = require('../logic/translator');
+const { validateHazardDescription, normalizeSector } = require('../logic/validator');
+const { sanitizeString } = require('../middleware/security');
 
 /**
  * POST /api/hazards
@@ -33,27 +35,28 @@ router.post('/', (req, res) => {
     } = req.body;
 
     const rawInput = descriptionNative || description;
-    if (!rawInput || !String(rawInput).trim()) {
-      return res.status(400).json({ error: 'Hazard description is required' });
+    const descValidation = validateHazardDescription(rawInput);
+    if (!descValidation.valid) {
+      return res.status(400).json({ error: descValidation.error });
     }
 
     const isAnonymous = anonymous === true || anonymous === 'true' || anonymous === 'on' || anonymous === undefined;
 
     // Multilingual translation to English and language detection
-    const translation = translateHazardDescription(rawInput);
+    const translation = translateHazardDescription(descValidation.sanitized);
     const resolvedLanguage = language || translation.language;
     const resolvedNative = descriptionNative || translation.original;
     const resolvedEnglish = descriptionEnglish || translation.english;
 
     const newHazard = addHazard({
-      sector,
-      category,
+      sector: normalizeSector(sector),
+      category: category ? sanitizeString(category) : 'General',
       description: resolvedEnglish,
       descriptionNative: resolvedNative,
       descriptionEnglish: resolvedEnglish,
       language: resolvedLanguage,
       anonymous: isAnonymous,
-      workerName: isAnonymous ? undefined : workerName,
+      workerName: isAnonymous ? undefined : (workerName ? sanitizeString(workerName) : undefined),
       workerId: isAnonymous ? undefined : workerId
     });
 
