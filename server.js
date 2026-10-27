@@ -83,7 +83,6 @@ app.get('/api/admin/workforce', requireAdminToken, (req, res) => {
     return {
       id: w.id,
       username: w.username || w.id.toLowerCase(),
-      password: w.password || 'password123',
       name: w.name,
       role: w.role,
       sector: w.sector,

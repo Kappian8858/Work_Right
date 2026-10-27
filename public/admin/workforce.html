@@ -183,7 +183,6 @@
                 <tr>
                   <th scope="col">Employee ID</th>
                   <th scope="col">Username</th>
-                  <th scope="col">Password</th>
                   <th scope="col">Name</th>
                   <th scope="col">Trade / Role</th>
                   <th scope="col">Total Weeks</th>
@@ -193,7 +192,7 @@
               </thead>
               <tbody id="workforceTableBody">
                 <tr>
-                  <td colspan="8" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
+                  <td colspan="7" style="text-align: center; padding: 30px; color: var(--admin-text-muted);">
                     Loading workforce directory...
                   </td>
                 </tr>
@@ -318,7 +317,7 @@
 
           <div class="form-group">
             <label class="form-label" for="newWorkerPassword" style="font-size: 13px; font-weight: 700; margin-bottom: 4px; display: block;">Password for Worker</label>
-            <input type="text" id="newWorkerPassword" class="form-input" value="password123" required autocomplete="off">
+            <input type="password" id="newWorkerPassword" class="form-input" value="password123" required autocomplete="off">
           </div>
         </div>
 
@@ -441,7 +440,6 @@
           <tr>
             <td><strong style="color: #1d4ed8;">${w.id}</strong></td>
             <td><code>${w.username || w.id.toLowerCase()}</code></td>
-            <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${escapeHtml(w.password || 'password123')}</code></td>
             <td><strong>${escapeHtml(w.name)}</strong></td>
             <td>${escapeHtml(w.role)}</td>
             <td><strong>${w.totalWeeksWorked || 0} Weeks</strong></td>
